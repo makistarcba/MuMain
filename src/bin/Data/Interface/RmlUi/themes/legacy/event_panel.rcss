@@ -1,0 +1,54 @@
+/* VORTHANIA: legacy theme for the event panel (CEventPanelWindow): the old client's panel was
+   a 190-unit column on the right of the screen; here a dark box like the F1 help's (black at 80%,
+   1-unit black frame) at the top right of the .stage. Reference px times --root-scale inside the
+   counter-scaled box. */
+
+#panel { pointer-events: none; }
+
+#event_box {
+	position: absolute;
+	left: 448px;
+	top: 2px;
+	width: calc(188px * var(--root-scale));
+	padding: calc(4px * var(--root-scale)) calc(6px * var(--root-scale));
+	border-width: calc(1px * var(--root-scale));
+	border-color: #000000;
+	background-color: rgba(0, 0, 0, 204);
+	font-family: "token(font-body)";
+	color: #dcdcdc;
+}
+
+.ev-title {
+	display: block;
+	text-align: center;
+	font-weight: bold;
+	color: #ffdc78;
+	line-height: calc(var(--bold-line-height, 0px) * var(--root-scale));
+}
+.ev-clock {
+	display: block;
+	text-align: center;
+	color: #aaaaaa;
+	line-height: calc(var(--line-height, 0px) * var(--root-scale));
+	margin-bottom: calc(var(--line-height, 0px) * 0.4 * var(--root-scale));
+}
+.ev-line {
+	display: block;
+	white-space: nowrap;
+	overflow: hidden;
+	line-height: calc(var(--line-height, 0px) * var(--root-scale));
+	margin-bottom: calc(var(--line-height, 0px) * 0.1 * var(--root-scale));
+}
+.ev-line.indent1 { padding-left: calc(8px * var(--root-scale)); }
+.ev-line.indent2 { padding-left: calc(16px * var(--root-scale)); }
+.ev-right {
+	float: right;
+	padding-left: calc(4px * var(--root-scale));
+}
+.ev-footer {
+	display: block;
+	text-align: center;
+	color: #787878;
+	line-height: calc(var(--line-height, 0px) * var(--root-scale));
+	margin-top: calc(var(--line-height, 0px) * 0.4 * var(--root-scale));
+}

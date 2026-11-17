@@ -3,6 +3,10 @@
 	<title>Character Creation</title>
 	<link type="text/rcss" href="base.rcss"/>
 	<link type="text/rcss" href="char_make.rcss"/>
+	<!-- VORTHANIA: the classes the server does not offer (Summoner, Rage Fighter) get no button. -->
+	<style>
+		body .job-btn.vorthania-hidden { display: none !important; }
+	</style>
 </head>
 <body data-model="char_make">
 	<!-- Character-creation dialog. #backdrop dims the scene behind, its character info balloons
@@ -21,7 +25,7 @@
 
 		<div id="identity_strip" class="side-panel"></div>
 
-		<div class="job-btn" data-for="job : jobs" data-class-checked="job.checked" data-class-disabled="job.disabled"
+		<div class="job-btn" data-for="job : jobs" data-class-vorthania-hidden="job.hidden" data-class-checked="job.checked" data-class-disabled="job.disabled"
 		     data-attr-job="job.key"
 		     data-event-click="charmake_select_job(it_index)">{{job.label}}</div>
 

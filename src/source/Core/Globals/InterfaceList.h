@@ -131,6 +131,9 @@ enum INTERFACE_LIST
     // a different button model (arbitrary labeled list vs two fixed OK/Cancel slots). Same
     // reasoning as INTERFACE_CREDITS above.
     INTERFACE_GENERIC_MENU_DIALOG,
+    // VORTHANIA: the event panel (key H, UI/Dialogs/EventPanelWindow.h). Before INTERFACE_END for
+    // the same reason as the entries above.
+    INTERFACE_EVENT_PANEL,
     INTERFACE_END,
     INTERFACE_COUNT = INTERFACE_END - 2,
 };

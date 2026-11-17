@@ -87,8 +87,8 @@ namespace
     // CanGetCreated = false). El cliente de Season 6 tiene la lista de clases escrita adentro y no
     // existe paquete donde el servidor diga cuales habilitar: el jugador las elegia, escribia el
     // nombre y recien al confirmar el servidor lo rechazaba sin decir por que. El dia que se
-    // habiliten en el servidor, se sacan de aca. PENDIENTE (etapa 2): ocultarlas del todo en el
-    // char_make.rml (hoy quedan deshabilitadas, en gris, y no se pueden elegir).
+    // habiliten en el servidor, se sacan de aca. Quedan deshabilitadas y ademas sin boton
+    // (JobButtonEntry::hidden, clase vorthania-hidden en char_make.rml).
     constexpr bool EsClaseApagadaEnVorthania(int classIndex)
     {
         return classIndex == CLASS_SUMMONER || classIndex == CLASS_RAGEFIGHTER;
@@ -215,6 +215,7 @@ void CCharMakeWin::BindRmlModel(Rml::DataModelConstructor& c, CharMakeRmlModel& 
     job.RegisterMember("key", &JobButtonEntry::key);
     job.RegisterMember("checked", &JobButtonEntry::checked);
     job.RegisterMember("disabled", &JobButtonEntry::disabled);
+    job.RegisterMember("hidden", &JobButtonEntry::hidden); // VORTHANIA
     job.RegisterMember("label", &JobButtonEntry::label);
     c.RegisterArray<std::vector<JobButtonEntry>>();
 
@@ -567,6 +568,12 @@ void CCharMakeWin::SyncJobButtons()
             jobsDirty = true;
         }
         enabled[classIndex] = !disabled;
+        const bool hidden = EsClaseApagadaEnVorthania(classIndex); // VORTHANIA
+        if (entry.hidden != hidden)
+        {
+            entry.hidden = hidden;
+            jobsDirty = true;
+        }
 
         const std::string label = StringUtils::WideToNarrow(GetJobName(static_cast<CLASS_TYPE>(classIndex)));
         if (entry.label != label)

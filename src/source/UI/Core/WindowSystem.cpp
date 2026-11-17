@@ -86,6 +86,7 @@ CSystem::CSystem()
     m_pMuHelperSkillPicker = nullptr;
     m_pMuHelperDetail = nullptr;
     m_pNewHelpWindow = nullptr;
+    m_pEventPanelWindow = nullptr;
     m_pNewChatCommandWindow = nullptr;
     m_pNewItemExplanationWindow = nullptr;
     m_pNewSetItemExplanation = nullptr;
@@ -375,6 +376,13 @@ bool CSystem::LoadMainSceneInterface()
         return false;
     }
 
+    // VORTHANIA: the event panel (key H).
+    m_pEventPanelWindow = new CEventPanelWindow;
+    if (m_pEventPanelWindow->Create(m_pNewUIMng) == false)
+    {
+        return false;
+    }
+
     m_pNewItemExplanationWindow = new CItemExplanationWindow;
     if (m_pNewItemExplanationWindow->Create(m_pNewUIMng) == false)
     {
@@ -635,6 +643,7 @@ void CSystem::UnloadMainSceneInterface()
     }
 
     SAFE_DELETE(m_pNewHelpWindow);
+    SAFE_DELETE(m_pEventPanelWindow);
     SAFE_DELETE(m_pNewChatCommandWindow);
     SAFE_DELETE(m_pNewItemExplanationWindow);
     SAFE_DELETE(m_pNewSetItemExplanation);
@@ -980,6 +989,11 @@ void CSystem::Show(DWORD dwKey)
         Hide(INTERFACE_ITEM_EXPLANATION);
         Hide(INTERFACE_SETITEM_EXPLANATION);
         g_pHelp->OpenningProcess();
+    }
+    else if (dwKey == INTERFACE_EVENT_PANEL)
+    {
+        if (m_pEventPanelWindow)
+            m_pEventPanelWindow->OpenningProcess();
     }
     else if (dwKey == INTERFACE_ITEM_EXPLANATION)
     {
@@ -1363,6 +1377,11 @@ void CSystem::Hide(DWORD dwKey)
     else if (dwKey == INTERFACE_HELP)
     {
         g_pHelp->ClosingProcess();
+    }
+    else if (dwKey == INTERFACE_EVENT_PANEL)
+    {
+        if (m_pEventPanelWindow)
+            m_pEventPanelWindow->ClosingProcess();
     }
     else if (dwKey == INTERFACE_ITEM_EXPLANATION)
     {

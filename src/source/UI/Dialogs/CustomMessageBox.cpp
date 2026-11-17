@@ -665,8 +665,7 @@ void mu::ui::window::ShowChaosMixMenuDialog()
     btnGeneralMix.lines.push_back({ szText, false });
     mu_swprintf(szText, I18N::Game::Dinorant1015ItemsCloakOfInvisibility, Hero->ID);
     btnGeneralMix.lines.push_back({ szText, false });
-    mu_swprintf(szText, I18N::Game::FenrirSHornScrollOfBloodCondorSFeather, Hero->ID);
-    btnGeneralMix.lines.push_back({ szText, false });
+    // VORTHANIA: Fenrir, Scroll of Blood y Condor's Feather desenganchados en el servidor.
     btnGeneralMix.onClick = [] { g_MixRecipeMgr.SetMixType(0); };
     cfg.buttons.push_back(std::move(btnGeneralMix));
 
@@ -679,12 +678,7 @@ void mu::ui::window::ShowChaosMixMenuDialog()
     btnChaosMix.onClick = [] { g_MixRecipeMgr.SetMixType(1); };
     cfg.buttons.push_back(std::move(btnChaosMix));
 
-    GenericMenuConfig::MenuButton btnMix380;
-    btnMix380.label = I18N::Game::ItemOptionCombination;
-    mu_swprintf(szText, I18N::Game::Add380ItemOption, Hero->ID);
-    btnMix380.lines.push_back({ szText, false });
-    btnMix380.onClick = [] { g_MixRecipeMgr.SetMixType(2); };
-    cfg.buttons.push_back(std::move(btnMix380));
+    // VORTHANIA: sin mezcla 380 (receta desenganchada en el servidor): no hay boton.
 
     // Native's own CancelBtnDown side effect, mirrored onto Esc too (cfg.onCancel below) -- this
     // dialog sits on top of an already-open MixInventory, so just closing it without also

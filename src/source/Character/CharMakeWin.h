@@ -121,6 +121,8 @@ private:
         Rml::String key;
         bool checked = false;
         bool disabled = false;
+        // VORTHANIA: a class the server doesn't offer (Summoner, Rage Fighter) has no button.
+        bool hidden = false;
         Rml::String label;
     };
     struct CharMakeRmlModel

@@ -1,0 +1,24 @@
+<rml>
+<head>
+	<title>Eventos</title>
+	<link type="text/rcss" href="base.rcss"/>
+	<link type="text/rcss" href="event_panel.rcss"/>
+</head>
+<!-- VORTHANIA: the event panel (key H, CEventPanelWindow). #panel is the original 640x480 screen
+     (.stage); the box sits on its right edge, one counter-scaled layer at the native text size. The
+     mouse goes through it, like the F1 help; H or Escape closes it. -->
+<body data-model="event_panel">
+	<div id="panel" class="stage">
+		<div id="event_box" class="sharp-text"
+		     data-style---line-height="line_height + 'px'" data-style---bold-line-height="bold_line_height + 'px'">
+			<div class="ev-title" data-style-font-size="bold_text_px + 'px'">Eventos</div>
+			<div class="ev-clock" data-if="server_time != ''" data-style-font-size="text_px + 'px'">{{server_time}}</div>
+			<div class="ev-line" data-for="line : lines" data-class-indent1="line.indent == 1" data-class-indent2="line.indent == 2"
+			     data-style-font-size="text_px + 'px'"><span class="ev-right" data-if="line.right != ''"
+			       data-style-color="line.right_color">{{line.right}}</span><span class="ev-left"
+			       data-style-color="line.color">{{line.left}}</span></div>
+			<div class="ev-footer" data-style-font-size="text_px + 'px'">H o Esc para cerrar</div>
+		</div>
+	</div>
+</body>
+</rml>
