@@ -2985,10 +2985,24 @@ void SnapToCursor(CHARACTER* c, int heroX, int heroY, bool lookAtMouse)
 }
 } // namespace
 
+// The terrain texture under the hero. The roofs of Lorencia (tile 4) and Devias (3, 10+) fade out
+// when the hero walks into the building, and the leaves stop. VORTHANIA: it is also refreshed at the
+// top of MoveHero(), before its early returns: it used to be computed only at the very end, so any
+// frame that returned early (a slide, loading, stun...) left it stale and the roofs stayed on.
+static void UpdateHeroTile()
+{
+    int Index = ((int)Hero->Object.Position[1] / (int)TERRAIN_SCALE) * 256 + ((int)Hero->Object.Position[0] / (int)TERRAIN_SCALE);
+    if (Index < 0) Index = 0;
+    else if (Index > 65535) Index = 65535;
+    HeroTile = TerrainMappingLayer1[Index];
+}
+
 void MoveHero()
 {
     CHARACTER* c = Hero;
     OBJECT* o = &c->Object;
+
+    UpdateHeroTile(); // VORTHANIA
 
     // Re-arm world clicks once the button is released; the latch only suppresses the held click.
     // Kept above the early returns below (stun/sleep/dead/loading) so a release during any of
@@ -3460,10 +3474,7 @@ void MoveHero()
 
     Attack(Hero);
 
-    int Index = ((int)Hero->Object.Position[1] / (int)TERRAIN_SCALE) * 256 + ((int)Hero->Object.Position[0] / (int)TERRAIN_SCALE);
-    if (Index < 0) Index = 0;
-    else if (Index > 65535) Index = 65535;
-    HeroTile = TerrainMappingLayer1[Index];
+    UpdateHeroTile();
 }
 
 

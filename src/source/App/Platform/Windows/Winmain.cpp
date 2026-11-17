@@ -1542,6 +1542,15 @@ bool HandleClientEvent(SDL_Event& event)
     case SDL_EVENT_WINDOW_FOCUS_GAINED:
         HandleFocusChange(true);
         break;
+    // VORTHANIA: minimized, the game is silent (sounds and music: the engine's master volume,
+    // which nothing else touches); restored, it sounds again at the player's volumes.
+    case SDL_EVENT_WINDOW_MINIMIZED:
+        SetMasterVolume(-10000);
+        break;
+    case SDL_EVENT_WINDOW_RESTORED:
+    case SDL_EVENT_WINDOW_MAXIMIZED:
+        SetMasterVolume(0);
+        break;
 #ifndef _WIN32
     case SDL_EVENT_WINDOW_MOUSE_ENTER:
         // Wayland can deliver the first pointer-enter after the startup
