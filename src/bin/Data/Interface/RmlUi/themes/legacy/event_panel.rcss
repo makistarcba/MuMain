@@ -5,6 +5,7 @@
 body { pointer-events: none; }
 
 #event_box {
+	box-sizing: border-box;
 	position: absolute;
 	border-width: 1px;
 	border-color: #000000;
