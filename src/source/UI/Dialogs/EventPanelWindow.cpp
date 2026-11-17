@@ -11,6 +11,7 @@
 #include "Render/Text/CUIRenderTextSDLTtf.h"
 #include "UI/RmlBridge/RmlDocumentVisibility.h"
 #include "UI/RmlBridge/RmlNativeTextSize.h"
+#include "UI/Scaling/UITransform.h"
 
 #include <RmlUi/Core/ElementDocument.h>
 
@@ -254,6 +255,10 @@ void CEventPanelWindow::BindRmlModel(Rml::DataModelConstructor& c, EventPanelWin
     c.Bind("line_height", &model.lineHeight);
     c.Bind("bold_line_height", &model.boldLineHeight);
     c.Bind("server_time", &model.serverTime);
+    c.Bind("panel_left", &model.panelLeft);
+    c.Bind("panel_top", &model.panelTop);
+    c.Bind("panel_width", &model.panelWidth);
+    c.Bind("gap", &model.gap);
 
     auto line = c.RegisterStruct<EventPanelLineEntry>();
     line.RegisterMember("left", &EventPanelLineEntry::left);
@@ -286,6 +291,16 @@ void CEventPanelWindow::RebuildModel()
     if (second == m_LastBuildSecond && textPx == m_BuiltTextPx)
         return;
 
+    // The box: 200 reference units wide at the UI scale, 6 from the window's top-right corner.
+    {
+        EventPanelWindowRmlModel& place = m_RmlView.GetModel();
+        const float scale = UI::Scaling::TypographyScale(static_cast<int>(WindowWidth), static_cast<int>(WindowHeight));
+        place.panelWidth = 200.f * scale;
+        place.gap = 6.f * scale;
+        place.panelLeft = static_cast<float>(WindowWidth) - place.panelWidth - place.gap;
+        place.panelTop = place.gap;
+    }
+
     m_LastBuildSecond = second;
     m_BuiltTextPx = textPx;
 
@@ -304,7 +319,8 @@ void CEventPanelWindow::RebuildModel()
     model.lineHeight = static_cast<float>(CUIRenderTextSDLTtf::LineHeight(UI::Scaling::FontRole::Normal));
     model.boldLineHeight = static_cast<float>(CUIRenderTextSDLTtf::LineHeight(UI::Scaling::FontRole::Bold));
 
-    for (const char* field : {"lines", "server_time", "text_px", "bold_text_px", "line_height", "bold_line_height"})
+    for (const char* field : {"lines", "server_time", "text_px", "bold_text_px", "line_height", "bold_line_height",
+                              "panel_left", "panel_top", "panel_width", "gap"})
         m_RmlView.MarkDirty(field);
 }
 

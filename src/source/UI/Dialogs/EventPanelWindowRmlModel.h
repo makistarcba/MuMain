@@ -26,6 +26,13 @@ struct EventPanelWindowRmlModel
     float lineHeight = 0.f;
     float boldLineHeight = 0.f;
 
+    // Where the box goes, physical window px: computed in C++ (top-right corner of the window, at
+    // the UI scale), so no theme transform can move it.
+    float panelLeft = 0.f;
+    float panelTop = 0.f;
+    float panelWidth = 0.f;
+    float gap = 0.f; // padding and indents step, physical px
+
     Rml::String serverTime;
     std::vector<EventPanelLineEntry> lines;
 };
