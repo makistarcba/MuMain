@@ -27,6 +27,7 @@
 #include "Scenes/SceneCommon.h"
 #include "Core/Utilities/Log/ErrorReport.h"
 #include "Core/Globals/_enum.h"
+#include "Core/Utilities/Log/MuLogger.h"
 
 #include "Render/RmlUi/RmlUiRuntime.h"
 #include "UI/RmlBridge/RmlTheme.h"
@@ -554,6 +555,10 @@ void CMsgWin::RequestDeleteCharacter()
     const std::wstring typed = GetResidentPasswordInput();
     wcsncpy(InputText[0], typed.c_str(), kResidentPasswordMaxLength);
     InputText[0][kResidentPasswordMaxLength] = L'\0';
+    // VORTHANIA (28/09): rastro de QUE se mando al borrar personaje, sin la contrasena: solo el largo.
+    // Si sale 0, lo escrito no llego al cuadro (cliente); si sale bien, mirar el servidor
+    // (una cuenta con SecurityCode cargado hace que OpenMU deje de aceptar la contrasena).
+    mu::log::Get("ui")->info("[Vorthania] borrar personaje: largo={}", typed.size());
     m_RmlView.GetModel().residentPassword.clear();
     m_RmlView.MarkDirty("password_input");
 

@@ -82,6 +82,17 @@ namespace
     constexpr const char* kJobKeys[MAX_CLASS] = {
         "wizard", "knight", "elf", "dark", "dark-lord", "summoner", "rage-fighter"
     };
+
+    // VORTHANIA (26/09): clases que el servidor tiene apagadas (recorte a Season 2:
+    // CanGetCreated = false). El cliente de Season 6 tiene la lista de clases escrita adentro y no
+    // existe paquete donde el servidor diga cuales habilitar: el jugador las elegia, escribia el
+    // nombre y recien al confirmar el servidor lo rechazaba sin decir por que. El dia que se
+    // habiliten en el servidor, se sacan de aca. PENDIENTE (etapa 2): ocultarlas del todo en el
+    // char_make.rml (hoy quedan deshabilitadas, en gris, y no se pueden elegir).
+    constexpr bool EsClaseApagadaEnVorthania(int classIndex)
+    {
+        return classIndex == CLASS_SUMMONER || classIndex == CLASS_RAGEFIGHTER;
+    }
     constexpr int kDescSpriteOffsetY = 355;
     constexpr int kStatSpriteOffsetY = 24;
     constexpr int kDescriptionTextOffsetX = 10;
@@ -352,6 +363,16 @@ void CCharMakeWin::UpdateDisplay()
     m_aJobState[CLASS_SUMMONER].enabled = true;
 #endif //PBG_ADD_CHARACTERCARD
 
+    // VORTHANIA: va DESPUES del bloque de arriba a proposito, porque ese
+    // #else fuerza a Summoner a habilitado y lo pisaria.
+    for (int classIndex = 0; classIndex < MAX_CLASS; ++classIndex)
+    {
+        if (EsClaseApagadaEnVorthania(classIndex))
+        {
+            m_aJobState[classIndex].enabled = false;
+        }
+    }
+
     const bool isDarkLord = (m_nSelJob == CLASS_DARK_LORD);
     m_asprBack[CMW_SPR_STAT].SetSize(0, isDarkLord ? kDarkLordStatHeight : kDefaultStatHeight, Y);
 
@@ -364,7 +385,7 @@ void CCharMakeWin::RmlClickJob(int nClassIndex)
 {
     if (nClassIndex < 0 || nClassIndex >= MAX_CLASS)
         return;
-    if (!m_aJobState[nClassIndex].enabled)
+    if (!m_aJobState[nClassIndex].enabled || EsClaseApagadaEnVorthania(nClassIndex)) // VORTHANIA
         return;
     SelectJob(nClassIndex);
 }

@@ -3,6 +3,8 @@
 
 #include "stdafx.h"
 #include "Core/Platform/Quit.h"
+#include <set>      // VORTHANIA
+#include <string>   // VORTHANIA
 #include "LoadData.h"
 
 #include "Core/Content/ContentStore.h"
@@ -72,8 +74,14 @@ bool CLoadData::AccessModel(int Type, const wchar_t* Dir, const wchar_t* FileNam
                 return false;
         }
 
-        MU_LOG_ERROR(mu::log::Get("data"), "AccessModel failed: {}{} (Type={})", mu_wchar_to_utf8(Dir),
-                     mu_wchar_to_utf8(Name.c_str()), Type);
+        // VORTHANIA: el Data que trae MuMain esta incompleto a proposito, asi que cada carga de mapa
+        // escupia cientos de estas lineas y el log se volvia ilegible. Cada modelo faltante, UNA vez.
+        static std::set<std::wstring> s_yaAvisados;
+        if (s_yaAvisados.insert(std::wstring(Dir) + Name).second)
+        {
+            MU_LOG_ERROR(mu::log::Get("data"), "AccessModel failed: {}{} (Type={})", mu_wchar_to_utf8(Dir),
+                         mu_wchar_to_utf8(Name.c_str()), Type);
+        }
 
         if (wcscmp(FileName, L"Monster") == 0 || wcscmp(FileName, L"Player") == 0 || wcscmp(FileName, L"PlayerTest") == 0 || wcscmp(FileName, L"Angel") == 0)
         {

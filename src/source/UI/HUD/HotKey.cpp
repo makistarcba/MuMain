@@ -274,6 +274,8 @@ bool mu::ui::window::CHotKey::UpdateKeyEvent()
 
         return false;
     }
+    // VORTHANIA PENDIENTE (etapa 2): tecla H = panel de eventos (con el baul abierto la H es del baul
+    // extendido). Vuelve cuando la ventana del panel este portada a RmlUi.
     else if (mu::ui::window::IsPress('M') == true)
     {
         g_pNewUISystem->Toggle(mu::ui::window::INTERFACE_MOVEMAP);

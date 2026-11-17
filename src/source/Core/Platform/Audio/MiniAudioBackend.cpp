@@ -17,6 +17,7 @@
 #include <cstring>
 #include <utility>
 
+#include <set>   // VORTHANIA: s_sonidosQueFallaron (un aviso por sonido faltante)
 // S_OK, S_FALSE are now provided by PlatformTypes.h (via PCH)
 #ifndef E_INVALIDARG
 #define E_INVALIDARG 0x80070057L
@@ -315,10 +316,17 @@ void MiniAudioBackend::LoadSound(ESound buffer, const wchar_t* filename, int cha
 
         if (result != MA_SUCCESS)
         {
-            mu::log::Get("audio")->error(
-                "AUDIO: MiniAudioBackend::LoadSound -- ma_sound_init_from_file failed for '{}' "
-                "channel {} ({})",
-                AudioPathToUtf8(filename), ch, static_cast<int>(result));
+            // VORTHANIA: Data/Sound no existe en este build, asi que fallan
+            // unos 200 archivos en cada carga de mapa. Una linea por archivo
+            // y listo; si no, un error de verdad queda enterrado.
+            static std::set<std::string> s_sonidosQueFallaron;
+            if (s_sonidosQueFallaron.insert(utf8Path).second)
+            {
+                mu::log::Get("audio")->error(
+                    "AUDIO: MiniAudioBackend::LoadSound -- ma_sound_init_from_file failed for '{}' "
+                    "channel {} ({}). No se vuelve a avisar por este archivo.",
+                    AudioPathToUtf8(filename), ch, static_cast<int>(result));
+            }
             // Uninit any channels already loaded for this slot
             for (int prev = 0; prev < ch; ++prev)
             {

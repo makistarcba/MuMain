@@ -4,6 +4,7 @@
 #include "GameLogic/Automation/Movement.h"
 #include "GameLogic/Automation/Pickup.h"
 #include "GameLogic/Automation/Skill.h"
+#include "Core/Utilities/Vigilante.h" // VORTHANIA
 #include "GameLogic/Combat/SkillExecution.h"
 #include "GameLogic/Items/ShopRestrictions.h"
 
@@ -203,6 +204,11 @@ namespace MUHelper
 
     void CMuHelper::Work()
     {
+        // VORTHANIA: el MU Helper NO corre en su propio hilo. WorkLoop tiene
+        // firma de TimerProc y lo dispara un SetTimer, o sea que esto pasa en
+        // el hilo principal, entre cuadro y cuadro. Si el cliente se cuelga
+        // aca, el vigilante lo va a decir con todas las letras.
+        vorthania::MarcarEtapa("MU Helper: Work");
         try
         {
             if (!ActivatePet())

@@ -22,6 +22,7 @@ enum eCursedTempleTeam
 }; // namespace SEASON3A
 
 #include "Core/Globals/InterfaceList.h"
+// VORTHANIA: INTERFACE_EVENT_PANEL (panel de eventos, tecla H) va en InterfaceList.h cuando se porte la ventana a RmlUi.
 
 namespace info
 {

@@ -142,7 +142,8 @@ void RenderBitmap(int Texture, float x, float y, float Width, float Height, floa
 void RenderColorBitmap(int Texture, float x, float y, float Width, float Height, float u = 0.f, float v = 0.f, float uWidth = 1.f, float vHeight = 1.f, unsigned int color = 0xffffffff);
 void RenderBitmapRotate(int Texture, float x, float y, float Width, float Height, float Angle, float u = 0.f,
     float v = 0.f, float uWidth = 1.f, float vHeight = 1.f, unsigned int color = 0xFFFFFFFFu);
-void RenderBitRotate(int Texture, float x, float y, float Width, float Height, float Rotate);
+// VORTHANIA: Alpha opcional, para dibujar el mapa del TAB translucido.
+void RenderBitRotate(int Texture, float x, float y, float Width, float Height, float Rotate, float Alpha = 1.f);
 void RenderBitmapLocalRotate(int Texture, float x, float y, float Width, float Height, float Rotate, float u = 0.f, float v = 0.f, float uWidth = 1.f, float vHeight = 1.f);
 void RenderBitmapAlpha(int Texture, float sx, float sy, float Width, float Height);
 void RenderBitmapUV(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth,

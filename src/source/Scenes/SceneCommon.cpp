@@ -63,7 +63,7 @@ extern ITEM PickItem;
 extern ITEM TargetItem;
 extern int ErrorMessage;
 extern bool MouseLButtonPush;
-extern int MouseUpdateTime;
+extern float MouseUpdateTime;  // Vorthania: es float
 extern int MouseUpdateTimeMax;
 extern bool g_bEnterPressed;
 

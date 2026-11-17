@@ -16,6 +16,7 @@
 #include "App/Control/DrawPurityCheck.h"
 #include "Core/Utilities/DrawSpawnCheck.h"
 #include "Core/Text/Utf8.h"
+#include "Core/Utilities/Vigilante.h" // VORTHANIA: perro guardian de cuelgues y crasheos
 #include "App/Platform/DiagnosticFrameCaptureSchedule.h"
 #include "App/Platform/DiagnosticFrameCaptureWriter.h"
 
@@ -920,15 +921,21 @@ bool ExceptionCallback(_EXCEPTION_POINTERS* pExceptionInfo)
 double CPU_AVG = 0.0;
 static void RenderProfiledFrame()
 {
+    // VORTHANIA: un latido por cuadro para el vigilante (Core/Utilities/Vigilante.h). Si deja de
+    // latir 5 s, escribe en el log la ultima etapa marcada: asi se sabe donde se colgo el cliente.
+    vorthania::LatirBuclePrincipal();
     {
         FRAME_PROFILE(RendererBegin);
+        vorthania::MarcarEtapa("cuadro: BeginFrame");
         mu::GetRenderer().BeginFrame();
     }
     RenderScene(g_hDC);
     {
         FRAME_PROFILE(RendererEnd);
+        vorthania::MarcarEtapa("cuadro: EndFrame (presentar)");
         mu::GetRenderer().EndFrame();
     }
+    vorthania::MarcarEtapa("bucle: esperando proximo cuadro");
     FrameProfiler::CompleteFrame();
     Core::Benchmark::Recorder::Instance().Tick();
 }
@@ -2485,6 +2492,10 @@ bool StartClient(char* szCmdLine)
     // Closes the control socket and removes its file, so a later client with
     // the same name does not find a live-looking socket.
     g_teardown.Push([] { App::Control::ControlServer::Instance().Stop(); });
+
+    // VORTHANIA: vigilante de cuelgues y crasheos (escribe en el log la etapa donde se trabo).
+    vorthania::IniciarVigilante();
+    g_teardown.Push([] { vorthania::DetenerVigilante(); });
 
     constexpr UINT timerResolution = 1;
     g_preciseTimer = timeBeginPeriod(timerResolution) == TIMERR_NOERROR;

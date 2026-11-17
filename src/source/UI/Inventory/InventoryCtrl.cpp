@@ -946,7 +946,9 @@ bool mu::ui::window::CInventoryCtrl::UpdateMouseEvent()
         ITEM* pItem = this->FindItem(m_iPointedSquareIndex);
         if (pItem)
         {
-            if (CreatePickedItem(this, pItem, true))
+            // Vorthania: como en el MU original, el item agarrado queda centrado en el puntero.
+            // Upstream conservaba el punto donde se lo agarro (true) y el item quedaba corrido.
+            if (CreatePickedItem(this, pItem, false))
             {
                 RemoveItem(pItem);
                 return false;

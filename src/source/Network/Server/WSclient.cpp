@@ -74,6 +74,7 @@
 #include "GameLogic/Commands/ChatCommandCatalog.h"
 #include "GameLogic/Warps/ServerWarpList.h"
 #include "Network/MoveCommandData.h"
+#include "GameLogic/Events/EventPanelState.h" // VORTHANIA: panel de eventos (H)
 #include "GameLogic/Events/Cinematic/CDirection.h"
 #include "Character/CSParts.h"
 #include "Engine/Physics/PhysicsManager.h"
@@ -1071,6 +1072,14 @@ BOOL ReceiveLogOut(const BYTE* ReceiveBuffer, BOOL bEncrypted)
 {
     LogOut = false;
     auto Data = (LPPHEADER_DEFAULT_SUBCODE)ReceiveBuffer;
+
+    // VORTHANIA: 3 = the server refused or cancelled the logout (self-defense is active).
+    // Stay in the game; the reason arrives as a normal chat message.
+    if (Data->Value == 3)
+    {
+        return (TRUE);
+    }
+
     switch (Data->Value)
     {
     case 0:
@@ -1379,6 +1388,9 @@ BOOL ReceiveJoinMapServer(std::span<const BYTE> ReceiveBuffer)
     // ones of a previous character before asking for them again.
     GameLogic::Commands::Catalog().Reset();
     GameLogic::Commands::Catalog().RequestOnce();
+
+    // VORTHANIA: the event panel of a previous character is outdated.
+    GameLogic::Events::EventPanel().Reset();
 
     g_ConsoleDebug->Write(MCD_RECEIVE, L"0x03 [ReceiveJoinMapServer]");
 
@@ -13960,6 +13972,11 @@ static void ProcessPacket(const BYTE* ReceiveBuffer, int32_t Size)
             {
                 g_ConsoleDebug->Write(MCD_RECEIVE, L"Recv [0xF5][0x09] (too short: %d bytes)", Size);
             }
+        }
+        else if (subcode == GameLogic::Events::EventPanelState::SubCode && !bIsC1C3)
+        {
+            // VORTHANIA: panel de eventos (H).
+            GameLogic::Events::EventPanel().ReadPacket(ReceiveBuffer, Size);
         }
         else
         {

@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <string>
+#include "Core/Utilities/Vigilante.h" // VORTHANIA
 #include <vector>
 #include <algorithm>
 #include <numeric>
@@ -119,7 +120,8 @@ static bool g_bShowDebugInfo =
     false;
 #endif
 
-static bool g_bShowFpsCounter = false;
+// Vorthania: el contador de FPS arranca prendido (se apaga con "$fpscounter off" en el chat)
+static bool g_bShowFpsCounter = true;
 
 void SetShowDebugInfo(bool enabled)
 {
@@ -1335,6 +1337,7 @@ void PrepareSceneBeforeFrame()
 void RenderScene(HDC hDC)
 {
     CalcFPS();
+    vorthania::MarcarEtapa("escena: logica"); // VORTHANIA
     UpdateSceneState();
 
     // Drive auto-reconnect after the scene loops have advanced this frame. It
@@ -1348,6 +1351,7 @@ void RenderScene(HDC hDC)
     try
     {
         g_Luminosity = sinf(WorldTime * 0.004f) * 0.15f + 0.6f;
+        vorthania::MarcarEtapa("escena: dibujo"); // VORTHANIA
         switch (SceneFlag)
         {
         case WEBZEN_SCENE:
@@ -1380,5 +1384,6 @@ void RenderScene(HDC hDC)
 
     // SDL may deliver button-down and button-up in one event batch. Keep these
     // one-shot flags alive until scene logic has consumed the rendered frame.
+    vorthania::MarcarEtapa("bucle: fin de cuadro"); // VORTHANIA
     ClearMousePressState();
 }
