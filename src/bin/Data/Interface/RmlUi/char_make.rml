@@ -5,7 +5,7 @@
 	<link type="text/rcss" href="char_make.rcss"/>
 	<!-- VORTHANIA: the classes the server does not offer (Summoner, Rage Fighter) get no button. -->
 	<style>
-		body .job-btn.vorthania-hidden { display: none !important; }
+		body .job-btn.vorthania-hidden { display: none; }
 	</style>
 </head>
 <body data-model="char_make">

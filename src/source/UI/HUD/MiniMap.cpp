@@ -33,7 +33,9 @@
 #include <string>
 #include <vector>
 
-// VORTHANIA: to walk from the map.
+// VORTHANIA: to walk from the map. SendMove() sends TargetX/TargetY as the destination.
+extern int TargetX;
+extern int TargetY;
 #include "Engine/AI/ZzzAI.h"            // PathFinding2
 #include "Engine/Object/ZzzInterface.h" // SendMove
 #include "Render/Terrain/ZzzLodTerrain.h" // TerrainWall
@@ -439,6 +441,23 @@ void mu::ui::window::CMiniMap::UnloadImages()
 
 bool mu::ui::window::CMiniMap::UpdateMouseEvent()
 {
+    // VORTHANIA: a left click on the map (not on the close button) walks there. It reads the same
+    // pointer as the preview cross (g_fWindowMouseX/Y), so the hero goes where the cross is.
+    if (IsVisible() && m_bSuccess && IsPress(VK_LBUTTON))
+    {
+        const UI::Scaling::Transform overlay = OverlayTransform();
+        const float px = UI::Scaling::LogicalX(overlay, g_fWindowMouseX);
+        const float py = UI::Scaling::LogicalY(overlay, g_fWindowMouseY);
+        const bool onClose = px >= 613.f && px <= 643.f && py >= 3.f && py <= 28.f;
+        if (!onClose && py >= 0.f && py < static_cast<float>(kMapAreaHeight))
+        {
+            m_PendingWalk = true;
+            m_PendingWalkX = g_fWindowMouseX;
+            m_PendingWalkY = g_fWindowMouseY;
+            return false;
+        }
+    }
+
     // The close button's click is RmlUi's (minimap_close); like the original, the pointer over the
     // top 430 rows goes to nothing behind the map.
     const UI::Scaling::Transform overlay = OverlayTransform();
@@ -480,13 +499,15 @@ void mu::ui::window::CMiniMap::BindRmlModel(Rml::DataModelConstructor& c, MiniMa
     vline.RegisterMember("color", &MiniMapLineEntry::color);
     c.RegisterArray<std::vector<MiniMapLineEntry>>();
     c.Bind("vorth_lines", &model.vorthLines);
-    c.BindEventCallback("minimap_walk",
-                        [this](Rml::DataModelHandle, Rml::Event& event, const Rml::VariantList&)
+    // VORTHANIA: the click to walk is read in UpdateMouseEvent(); this is the fallback when RmlUi
+    // keeps the click. Both take the pointer the preview cross uses (not the event's coordinates).
+    c.BindEventCallback("minimap_walk", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&)
                         {
                             m_PendingWalk = true;
-                            m_PendingWalkX = event.GetParameter<float>("mouse_x", 0.f);
-                            m_PendingWalkY = event.GetParameter<float>("mouse_y", 0.f);
+                            m_PendingWalkX = g_fWindowMouseX;
+                            m_PendingWalkY = g_fWindowMouseY;
                         });
+
     c.RegisterArray<std::vector<float>>();
 
     c.Bind("hint_visible", &model.hintVisible);
@@ -824,6 +845,8 @@ void mu::ui::window::CMiniMap::WalkToWindowPoint(float windowX, float windowY)
     // A tile that can't be stepped on: nothing, rather than the hero walking anywhere.
     if (!VorthWalkable(destX, destY))
         return;
+    TargetX = destX;
+    TargetY = destY;
     if (!PathFinding2(Hero->PositionX, Hero->PositionY, destX, destY, &Hero->Path))
         return;
 
@@ -882,6 +905,8 @@ void mu::ui::window::CMiniMap::UpdateAutoMove()
         return;
     }
 
+    TargetX = g_VorthAutoMoveX;
+    TargetY = g_VorthAutoMoveY;
     if (PathFinding2(Hero->PositionX, Hero->PositionY, g_VorthAutoMoveX, g_VorthAutoMoveY, &Hero->Path))
     {
         Hero->MovementType = MOVEMENT_MOVE;

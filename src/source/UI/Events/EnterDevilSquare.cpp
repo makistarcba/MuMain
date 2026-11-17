@@ -184,9 +184,10 @@ void CEnterDevilSquare::OpenningProcess()
                     m_iDevilSquareLimitLevel[(iLimitLVIndex * MAX_ENTER_GRADE) + i][1]);
         buttons[i].label = sztext;
     }
-    mu_swprintf(sztext, I18N::Game::SquareNoDMasterLevel, 7);
-    buttons[MAX_ENTER_GRADE - 1].label = sztext;
-    buttons[m_iNumActiveBtn].enabled = true;
+    // VORTHANIA: no master level in Season 2: the master level (last) button isn't shown.
+    buttons.pop_back();
+    if (m_iNumActiveBtn >= 0 && m_iNumActiveBtn < static_cast<int>(buttons.size()))
+        buttons[m_iNumActiveBtn].enabled = true;
 
     SetViewContent(buttons);
 }

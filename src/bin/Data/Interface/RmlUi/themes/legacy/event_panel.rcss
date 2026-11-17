@@ -3,7 +3,19 @@
    1-unit black frame) at the top right of the .stage. Reference px times --root-scale inside the
    counter-scaled box. */
 
-#panel { pointer-events: none; }
+/* A 640x480 reference screen like .stage, but pinned to the window's top-right corner at the UI
+   scale, so the box stays at the right edge at any resolution or aspect. */
+#panel {
+	position: absolute;
+	right: 0;
+	top: 0;
+	width: 640px;
+	height: 480px;
+	transform-origin: right top;
+	transform: scale(var(--ui-scale));
+	--root-scale: var(--ui-scale);
+	pointer-events: none;
+}
 
 #event_box {
 	position: absolute;
