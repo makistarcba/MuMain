@@ -252,8 +252,6 @@ void CEventPanelWindow::BindRmlModel(Rml::DataModelConstructor& c, EventPanelWin
 {
     c.Bind("text_px", &model.textPx);
     c.Bind("bold_text_px", &model.boldTextPx);
-    c.Bind("line_height", &model.lineHeight);
-    c.Bind("bold_line_height", &model.boldLineHeight);
     c.Bind("server_time", &model.serverTime);
     c.Bind("panel_left", &model.panelLeft);
     c.Bind("panel_top", &model.panelTop);
@@ -316,10 +314,8 @@ void CEventPanelWindow::RebuildModel()
 
     model.textPx = textPx;
     model.boldTextPx = UI::RmlBridge::NativeTextPx(UI::Scaling::FontRole::Bold);
-    model.lineHeight = static_cast<float>(CUIRenderTextSDLTtf::LineHeight(UI::Scaling::FontRole::Normal));
-    model.boldLineHeight = static_cast<float>(CUIRenderTextSDLTtf::LineHeight(UI::Scaling::FontRole::Bold));
 
-    for (const char* field : {"lines", "server_time", "text_px", "bold_text_px", "line_height", "bold_line_height",
+    for (const char* field : {"lines", "server_time", "text_px", "bold_text_px",
                               "panel_left", "panel_top", "panel_width", "gap"})
         m_RmlView.MarkDirty(field);
 }

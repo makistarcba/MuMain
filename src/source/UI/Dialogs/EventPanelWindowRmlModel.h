@@ -23,8 +23,6 @@ struct EventPanelWindowRmlModel
 {
     float textPx = 0.f;
     float boldTextPx = 0.f;
-    float lineHeight = 0.f;
-    float boldLineHeight = 0.f;
 
     // Where the box goes, physical window px: computed in C++ (top-right corner of the window, at
     // the UI scale), so no theme transform can move it.

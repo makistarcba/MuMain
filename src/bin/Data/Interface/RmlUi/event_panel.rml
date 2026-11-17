@@ -1,4 +1,6 @@
 <rml>
+	<!-- bound-geometry: the box follows the live window size (top-right corner at the UI scale), computed in
+	     C++ in physical px; a theme only styles it -->
 <head>
 	<title>Eventos</title>
 	<link type="text/rcss" href="base.rcss"/>
