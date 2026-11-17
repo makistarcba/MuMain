@@ -458,7 +458,7 @@ namespace SEASON3B
 
     class CChaosMixMenuMsgBox : public CNewUIMessageBoxBase
     {
-        static constexpr float MIDDLE_COUNT = 13.0f;
+        static constexpr float MIDDLE_COUNT = 9.0f; // VORTHANIA: era 13, sin la seccion 380
     public:
         CChaosMixMenuMsgBox();
         virtual ~CChaosMixMenuMsgBox();

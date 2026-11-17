@@ -6,6 +6,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "Core/Utilities/Vigilante.h" // VORTHANIA
 #include "Render/Models/ZzzBMD.h"
 #include "Engine/Object/ZzzInfomation.h"
 #include "Engine/Object/ZzzObject.h"
@@ -234,8 +235,12 @@ void MoveBoid(OBJECT* o, int i, OBJECT* Boids, int MAX)
         TargetX = o->Position[0] + TargetX / NumBirds;
         TargetY = o->Position[1] + TargetY / NumBirds;
 
-        o->Angle[2] = (float)TurnAngle((int)o->Angle[2], CalcAngle(o->Position[0], o->Position[1], TargetX, TargetY),
-                                       (int)o->Gravity);
+        // Vorthania: el giro (Gravity grados) era por cuadro y el avance si se escala con los FPS.
+        // A mas de 25 FPS los pajaros giraban mas rapido de lo que avanzaban y daban vueltas
+        // en remolino. Se escala el giro igual que el avance (25 FPS = como el original).
+        o->Angle[2] = TurnAngle2(o->Angle[2],
+                                 static_cast<float>(CalcAngle(o->Position[0], o->Position[1], TargetX, TargetY)),
+                                 o->Gravity * FPS_ANIMATION_FACTOR);
     }
 }
 
@@ -544,6 +549,36 @@ void Damage(vec3_t soPosition, CHARACTER* tc, float AttackRange, int AttackPoint
 PATH _path;
 PATH* path = &_path;
 
+// ============================================================================
+// VORTHANIA (27/09) — candado del buscador de caminos. LEER ANTES DE CONFIAR.
+//
+// QUE HACE: el PATH global de arriba es UNO SOLO para todo el juego. Este mutex
+// serializa todo uso del A* global.
+//
+// POR QUE ESTA, Y POR QUE **NO** ES EL ARREGLO DEL CUELGUE:
+// Lo puse convencido de que habia una carrera entre dos hilos: el principal y
+// el del MU Helper, porque MuHelper.h declara "std::thread m_timerThread".
+// Eso estaba MAL. Ese hilo se declara y **nunca se arranca**: no hay una sola
+// linea en todo el cliente que le asigne nada. El MU Helper corre por
+// SetTimer — su WorkLoop tiene firma de TimerProc — o sea en el hilo
+// principal, entre cuadro y cuadro. Los unicos hilos de verdad del cliente son
+// el medidor de CPU, un worker de la tienda y el vigilante.
+//
+// O sea: no habia dos hilos entrando al buscador, y este candado no arreglo el
+// cuelgue. Lo dejo porque es correcto y no cuesta nada (un mutex sin disputa
+// son nanosegundos), pero que quede escrito para que nadie lea el codigo y
+// crea que el cuelgue ya esta resuelto. NO LO ESTA.
+//
+// Lo que si sabemos del cuelgue: el proceso queda vivo, la ventana muestra el
+// ultimo cuadro y un nucleo entero queda al 100%. Eso es un bucle que gira, no
+// una espera. Donde gira, todavia no lo sabemos: para eso esta el vigilante
+// (Core/Utilities/Vigilante.h), que escribe en el log la etapa en la que el
+// bucle principal dejo de latir.
+//
+// ORDEN DE CANDADOS: primero el del personaje (a->Lock), despues este.
+// ============================================================================
+static std::mutex g_candadoBuscadorDeCaminos;
+
 bool MovePath(CHARACTER* c, bool Turn)
 {
     bool Success = false;
@@ -634,6 +669,8 @@ bool MovePath(CHARACTER* c, bool Turn)
 
 void InitPath()
 {
+    vorthania::MarcarEtapa("pathfinding: A* global"); // VORTHANIA
+    std::lock_guard<std::mutex> guardiaBuscador(g_candadoBuscadorDeCaminos);
     path->SetMapDimensions(256, 256, TerrainWall);
 }
 
@@ -654,6 +691,14 @@ bool PathFinding2(int sx, int sy, int tx, int ty, PATH_t* a, float fDistance, in
     }
 
     int Wall = iDefaultWall;
+
+    // VORTHANIA: de aca hasta el final de la funcion se usa el buscador global.
+    // El guardia vive hasta el cierre del bloque, asi que cubre las dos llamadas
+    // a FindPath Y la lectura de los resultados (GetPath / GetPathX / GetPathY),
+    // que es igual de importante: de nada sirve calcular sin pisarse si despues
+    // otro hilo recalcula antes de que este termine de copiar.
+    vorthania::MarcarEtapa("pathfinding: A* global"); // VORTHANIA
+    std::lock_guard<std::mutex> guardiaBuscador(g_candadoBuscadorDeCaminos);
 
     bool PathFound = path->FindPath(sx, sy, tx, ty, true, Wall, Value, fDistance);
     if (!PathFound)

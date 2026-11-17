@@ -251,7 +251,14 @@ void CMixRecipes::Reset()
 void CMixRecipes::AddRecipe(MIX_RECIPE* pMixRecipe)
 {
     if (pMixRecipe != NULL)
+    {
+        // Vorthania (14/11): m_iMixIndex viene del archivo y se usa como posicion en m_Recipes
+        // (GetCurRecipe / GetCurMixID). Al descartar las recetas +14/+15 (tope +13) las posiciones
+        // se corrian y el cliente mandaba el ID de otra mezcla: alas y todo lo que viene despues en
+        // el archivo "hacia el efecto" y el servidor lo rechazaba. Se renumera con la posicion real.
+        pMixRecipe->m_iMixIndex = static_cast<int>(m_Recipes.size());
         m_Recipes.push_back(pMixRecipe);
+    }
 }
 
 BOOL CMixRecipes::IsMixSource(ITEM* pItem)
@@ -1138,6 +1145,33 @@ void CMixRecipeMgr::OpenRecipeFile(const wchar_t* szFileName)
             auto* pMixRecipe = new MIX_RECIPE;
             fread(pMixRecipe, iSize, 1, fp);
             BuxConvert((BYTE*)pMixRecipe, iSize);
+
+            // Vorthania: tope de mejora +13. El servidor tiene desenganchadas las mezclas +14 y +15
+            // (vorthania-tope-13.sql), pero el cliente las seguia reconociendo: mostraba el % y dejaba
+            // apretar Combinar, y no pasaba nada. Se descartan las recetas del Goblin que piden un
+            // item +13 o +14 (las unicas que suben a +14 y +15). Para volver a +15: borrar este bloque.
+            bool bSobreTope = false;
+            if (j == MIXTYPE_GOBLIN_NORMAL)
+            {
+                for (int k = 0; k < pMixRecipe->m_iNumMixSoruces && k < MAX_MIX_SOURCES; ++k)
+                {
+                    const MIX_RECIPE_ITEM& src = pMixRecipe->m_MixSources[k];
+                    if (src.m_iLevelMin >= 13 && src.m_iLevelMin <= 14)
+                    {
+                        bSobreTope = true;
+                        break;
+                    }
+                }
+            }
+            if (bSobreTope)
+            {
+                wchar_t szTope[128];
+                mu_swprintf(szTope, L"Vorthania: receta de mezcla %d descartada (tope +13).", pMixRecipe->m_iMixID);
+                g_ErrorReport.Write(szTope);
+                delete pMixRecipe;
+                continue;
+            }
+
             m_MixRecipe[j].AddRecipe(pMixRecipe);
         }
     }

@@ -133,9 +133,12 @@ float UI::Scaling::BottomHudScale(int windowWidth, int windowHeight)
                       kMaximumHudScale * contentScale);
 }
 
+// Vorthania: la barra de abajo va entera y centrada (los costados pegados a la vida y el
+// mana, espacio libre a los lados). Upstream ancla la izquierda al borde izquierdo y la
+// derecha al borde derecho, y en pantallas anchas quedan huecos entre las bandas.
 UI::Scaling::Transform UI::Scaling::BottomHudLeftTransform(int windowWidth, int windowHeight)
 {
-    return BottomHudTransform(windowWidth, windowHeight, 0.0f);
+    return BottomHudCenterTransform(windowWidth, windowHeight);
 }
 
 UI::Scaling::Transform UI::Scaling::BottomHudCenterTransform(int windowWidth, int windowHeight)
@@ -147,16 +150,13 @@ UI::Scaling::Transform UI::Scaling::BottomHudCenterTransform(int windowWidth, in
 
 UI::Scaling::Transform UI::Scaling::BottomHudRightTransform(int windowWidth, int windowHeight)
 {
-    const float scale = BottomHudScale(windowWidth, windowHeight);
-    return BottomHudTransform(windowWidth, windowHeight,
-                              static_cast<float>(windowWidth) - kReferenceWidth * scale);
+    return BottomHudCenterTransform(windowWidth, windowHeight);
 }
 
 UI::Scaling::Transform UI::Scaling::BottomHudExperienceTransform(int windowWidth, int windowHeight)
 {
-    Transform transform = BottomHudLeftTransform(windowWidth, windowHeight);
-    transform.scaleX = static_cast<float>(windowWidth) / kReferenceWidth;
-    return transform;
+    // Vorthania: la barra de experiencia acompana a la barra centrada, del mismo ancho.
+    return BottomHudCenterTransform(windowWidth, windowHeight);
 }
 
 UI::Scaling::Transform UI::Scaling::DockLeftTransform(int windowWidth, int windowHeight)

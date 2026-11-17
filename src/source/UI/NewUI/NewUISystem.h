@@ -45,6 +45,7 @@
 #include "UI/NewUI/HUD/NewUIHeroPositionInfo.h"
 #include "UI/NewUI/Dialogs/NewUIHelpWindow.h"
 #include "UI/NewUI/Dialogs/NewUIChatCommandWindow.h"
+#include "UI/NewUI/Dialogs/NewUIEventPanelWindow.h"
 #include "UI/NewUI/Inventory/NewUIItemExplanationWindow.h"
 #include "UI/NewUI/Inventory/NewUISetItemExplanation.h"
 #include "UI/NewUI/HUD/NewUIQuickCommandWindow.h"
@@ -191,6 +192,7 @@ namespace SEASON3B
         CNewUIOptionWindow* m_pNewOptionWindow;
         CNewUIHelpWindow* m_pNewHelpWindow;
         CNewUIChatCommandWindow* m_pNewChatCommandWindow;
+        CNewUIEventPanelWindow* m_pNewEventPanelWindow; // VORTHANIA
         CNewUIItemExplanationWindow* m_pNewItemExplanationWindow;
         CNewUISetItemExplanation* m_pNewSetItemExplanation;
         CNewUIQuickCommandWindow* m_pNewQuickCommandWindow;
@@ -231,6 +233,7 @@ namespace SEASON3B
         CNewUIMuHelperSkillList* m_pNewUIMuHelperSkillList;
 
         bool CreateChatCommandWindow();
+        bool CreateEventPanelWindow(); // VORTHANIA
 
     public:
         CNewUIChatInputBox* GetUI_NewChatInputBox() const;
@@ -276,6 +279,7 @@ namespace SEASON3B
         CNewUIOptionWindow* GetUI_NewOptionWindow() const;
         CNewUIHelpWindow* GetUI_NewHelpWindow() const;
         CNewUIChatCommandWindow* GetUI_NewChatCommandWindow() const;
+        CNewUIEventPanelWindow* GetUI_NewEventPanelWindow() const; // VORTHANIA
         CNewUIItemExplanationWindow* GetUI_NewItemExplanationWindow() const;
         CNewUISetItemExplanation* GetUI_NewSetItemExplanation() const;
         CNewUIQuickCommandWindow* GetUI_NewQuickCommandWindow() const;

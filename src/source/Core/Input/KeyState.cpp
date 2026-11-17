@@ -84,6 +84,40 @@ namespace Core::Input
         default: break;
         }
 
+        // VORTHANIA (26/09): teclas que existen DOS VECES en el teclado.
+        //
+        // VkToScancode() traduce cada tecla de Windows a UN solo codigo de SDL.
+        // Pero los codigos de SDL son fisicos: el Enter grande y el Enter del
+        // pad numerico son teclas distintas (RETURN y KP_ENTER), igual que el 1
+        // de arriba y el 1 del pad. Windows las reporta con el mismo codigo
+        // virtual, SDL no. Al traducir a uno solo, la del pad se perdia.
+        //
+        // Sintoma que reporto Nicolas: el Enter del pad numerico no hacia nada.
+        // Los numeros del pad tenian el mismo problema, asi que van tambien:
+        // un jugador que aprieta el 1 del pad esperando la habilidad 1 es el
+        // mismo reclamo esperando a pasar.
+        {
+            const bool* stateDoble = SDL_GetKeyboardState(nullptr);
+            if (stateDoble != nullptr)
+            {
+                if (virtualKey == VK_RETURN)
+                {
+                    return stateDoble[SDL_SCANCODE_RETURN] || stateDoble[SDL_SCANCODE_KP_ENTER];
+                }
+
+                if (virtualKey >= '0' && virtualKey <= '9')
+                {
+                    const SDL_Scancode fila = (virtualKey == '0')
+                        ? SDL_SCANCODE_0
+                        : static_cast<SDL_Scancode>(SDL_SCANCODE_1 + (virtualKey - '1'));
+                    const SDL_Scancode pad = (virtualKey == '0')
+                        ? SDL_SCANCODE_KP_0
+                        : static_cast<SDL_Scancode>(SDL_SCANCODE_KP_1 + (virtualKey - '1'));
+                    return stateDoble[fila] || stateDoble[pad];
+                }
+            }
+        }
+
         const SDL_Scancode sc = VkToScancode(virtualKey);
         if (sc == SDL_SCANCODE_UNKNOWN) return false;
 

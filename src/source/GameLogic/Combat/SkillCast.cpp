@@ -57,7 +57,7 @@ extern int Attacking, ActionTarget;
 extern int TargetX, TargetY, TargetType, TargetNpc;
 extern float TargetAngle;
 extern bool EnableFastInput;
-extern int MouseUpdateTime, MouseUpdateTimeMax;
+extern float MouseUpdateTime; extern int MouseUpdateTimeMax;  // Vorthania: MouseUpdateTime es float
 extern int g_iFollowCharacter;
 extern int StandTime;
 

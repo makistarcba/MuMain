@@ -278,6 +278,13 @@ bool SEASON3B::CNewUIHotKey::UpdateKeyEvent()
 
         return false;
     }
+    // VORTHANIA: panel de eventos. With the vault open, H belongs to it (extended vault).
+    else if (SEASON3B::IsPress('H') == true && !g_pNewUISystem->IsVisible(SEASON3B::INTERFACE_STORAGE))
+    {
+        g_pNewUISystem->Toggle(SEASON3B::INTERFACE_EVENT_PANEL);
+        PlayBuffer(SOUND_CLICK01);
+        return false;
+    }
     else if (SEASON3B::IsPress('M') == true)
     {
         g_pNewUISystem->Toggle(SEASON3B::INTERFACE_MOVEMAP);

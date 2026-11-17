@@ -161,6 +161,12 @@ bool CNewUIInventoryActionController::HandleRightClick(CNewUIInventoryCtrl* targ
         return HandleMixAutoMove(targetControl);
     }
 
+    // Vorthania: clic derecho con el trade abierto pasa el item al trade.
+    if (g_pNewUISystem->IsVisible(INTERFACE_TRADE) && g_pNewUISystem->IsVisible(INTERFACE_INVENTORY))
+    {
+        return g_pTrade->ProcessMyInvenItemAutoMove(targetControl);
+    }
+
     if (g_pNewUISystem->IsVisible(INTERFACE_INVENTORY)
         && !g_pNewUISystem->IsVisible(INTERFACE_NPCSHOP)
         && !g_pNewUISystem->IsVisible(INTERFACE_TRADE)

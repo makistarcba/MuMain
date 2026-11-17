@@ -40,6 +40,7 @@
 #include "GameLogic/Items/InventoryUtils.h"
 #include "UI/Legacy/UIMapName.h" // rozy
 #include "GameLogic/Commands/ChatCommandCatalog.h"
+#include "GameLogic/Events/EventPanelState.h"
 #include "UI/Legacy/UIMng.h"
 #include "GameLogic/Events/Cinematic/CDirection.h"
 #include "Character/CSParts.h"
@@ -955,6 +956,14 @@ BOOL ReceiveLogOut(const BYTE* ReceiveBuffer, BOOL bEncrypted)
 {
     LogOut = false;
     auto Data = (LPPHEADER_DEFAULT_SUBCODE)ReceiveBuffer;
+
+    // VORTHANIA: 3 = the server refused or cancelled the logout (self-defense is active).
+    // Stay in the game; the reason arrives as a normal chat message.
+    if (Data->Value == 3)
+    {
+        return (TRUE);
+    }
+
     switch (Data->Value)
     {
     case 0:
@@ -1244,6 +1253,9 @@ BOOL ReceiveJoinMapServer(std::span<const BYTE> ReceiveBuffer)
     // ones of a previous character before asking for them again.
     GameLogic::Commands::Catalog().Reset();
     GameLogic::Commands::Catalog().RequestOnce();
+
+    // VORTHANIA: the event panel of a previous character is outdated.
+    GameLogic::Events::EventPanel().Reset();
 
     g_ConsoleDebug->Write(MCD_RECEIVE, L"0x03 [ReceiveJoinMapServer]");
 
@@ -14134,6 +14146,11 @@ static void ProcessPacket(const BYTE* ReceiveBuffer, int32_t Size)
         if (subcode == 0x01)
         {
             GameLogic::Commands::Catalog().AddFromPacket(ReceiveBuffer, Size);
+        }
+        else if (subcode == GameLogic::Events::EventPanelState::SubCode && !bIsC1C3)
+        {
+            // VORTHANIA: panel de eventos (H).
+            GameLogic::Events::EventPanel().ReadPacket(ReceiveBuffer, Size);
         }
         else
         {

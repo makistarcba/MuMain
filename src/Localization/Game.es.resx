@@ -1594,7 +1594,7 @@
     <comment>legacy_id=427</comment>
   </data>
   <data name="Please enter your WEBZEN.COM password." xml:space="preserve">
-    <value>Por favor ingrese su contraseña de WEBZEN.COM.</value>
+    <value>Ingresá la contraseña de tu cuenta de Vorthania.</value>
     <comment>legacy_id=428,444,1713</comment>
   </data>
   <data name="You have received an offer to join a guild." xml:space="preserve">
@@ -2610,7 +2610,7 @@
     <comment>legacy_id=690</comment>
   </data>
   <data name="Enter your WEBZEN.COM password." xml:space="preserve">
-    <value>Ingrese su contraseña de WEBZEN.COM.</value>
+    <value>Ingresá la contraseña de tu cuenta de Vorthania.</value>
     <comment>legacy_id=691</comment>
   </data>
   <data name="Unlock Vault" xml:space="preserve">
@@ -2634,7 +2634,7 @@
     <comment>legacy_id=696</comment>
   </data>
   <data name="EnterYourWEBZENCOMPassword697" xml:space="preserve">
-    <value>Introduce tu contraseña de WEBZEN.COM</value>
+    <value>Ingresá la contraseña de tu cuenta de Vorthania</value>
     <comment>legacy_id=697</comment>
   </data>
   <data name="Charisma Requirement: %d" xml:space="preserve">
@@ -3258,7 +3258,7 @@
     <comment>legacy_id=872</comment>
   </data>
   <data name="Dinorant, +10, +15 items, Cloak of Invisibility" xml:space="preserve">
-    <value>Dinorant, +10, +15 artículos, Capa de Invisibilidad</value>
+    <value>Dinorant, +10 ~ +13 artículos, Capa de Invisibilidad</value>
     <comment>legacy_id=873</comment>
   </data>
   <data name="Cape of Lord" xml:space="preserve">

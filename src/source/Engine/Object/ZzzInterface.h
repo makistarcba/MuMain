@@ -37,7 +37,7 @@ extern int  SelectModel;
 extern int  SelectMapping;
 extern bool DebugEnable;
 extern bool MouseOnWindow;
-extern int  MouseUpdateTime;
+extern float MouseUpdateTime;  // Vorthania: float, cuenta cuadros de 25 FPS
 extern int  MouseUpdateTimeMax;
 extern int  TalkNPC;
 extern int  SelectedItem;

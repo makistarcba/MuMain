@@ -2,6 +2,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "stdafx.h"
 #include "Core/Input/KeyState.h"
+#include "Core/Utilities/Vigilante.h" // VORTHANIA: perro guardian de cuelgues y crasheos
 #include "App/Platform/DiagnosticFrameCaptureSchedule.h"
 #include "App/Platform/DiagnosticFrameCaptureWriter.h"
 
@@ -1330,6 +1331,10 @@ MSG MainLoop()
 
     while (!Destroy)
     {
+        // VORTHANIA: un latido por cuadro. Si esto deja de pasar, el vigilante
+        // escribe en el log en que etapa se quedo trabado.
+        vorthania::LatirBuclePrincipal();
+
         SDL_Event event;
         int messageProcessed = 0;
 
@@ -1516,12 +1521,21 @@ MSG MainLoop()
                 g_MuEditorCore.Update();
 #endif
 
+                // VORTHANIA: marcas finas alrededor del dibujo. El vigilante
+                // venia diciendo "se colgo en fin de cuadro", que es todo lo
+                // que pasa DESPUES de la escena: presentar el cuadro, esperar a
+                // la placa, volver al bucle. Partido asi, el log dice cual de
+                // las tres, incluso sin simbolos.
                 RequestDiagnosticFrameCapture();
                 ApplyPendingVSyncPreference();
+                vorthania::MarcarEtapa("cuadro: BeginFrame");
                 mu::GetRenderer().BeginFrame();
                 RenderScene(g_hDC);
+                vorthania::MarcarEtapa("cuadro: EndFrame (presentar)");
                 mu::GetRenderer().EndFrame();
+                vorthania::MarcarEtapa("cuadro: captura de diagnostico");
                 ConsumeDiagnosticFrameCapture();
+                vorthania::MarcarEtapa("bucle: esperando proximo cuadro");
             }
         }
         else
@@ -2227,7 +2241,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int nC
 #endif // _WIN32
 
     std::thread cpuUsageRecorder(RecordCpuUsage);
+    vorthania::IniciarVigilante(); // VORTHANIA
     const MSG msg = MainLoop();
+    vorthania::DetenerVigilante(); // VORTHANIA
     ShutdownRuntime(cpuUsageRecorder);
 
     return msg.wParam;

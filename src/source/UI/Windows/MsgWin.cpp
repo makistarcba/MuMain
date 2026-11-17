@@ -21,6 +21,7 @@
 #include "Render/Textures/ZzzOpenglUtil.h"
 #include "Scenes/SceneCommon.h"
 #include "Core/Utilities/Log/ErrorReport.h"
+#include "Core/Utilities/Log/MuLogger.h"
 
 #define	MW_OK		0
 #define	MW_CANCEL	1
@@ -260,7 +261,16 @@ void CMsgWin::RenderControls()
     if (m_nMsgCode == MESSAGE_DELETE_CHARACTER_RESIDENT)
     {
         if (g_iChatInputType == 1)
+        {
+            // VORTHANIA (28/09): el color se pide a mano.
+            //
+            // Este cuadro es el mismo objeto global que usa el login, y el
+            // color del texto es estado que queda pegado de la ultima ventana
+            // que lo toco. Depender de eso es depender de en que orden abriste
+            // las ventanas. Se fija aca, cada vez que se dibuja.
+            g_pSinglePasswdInputBox->SetTextColor(255, 255, 230, 210);
             g_pSinglePasswdInputBox->Render();
+        }
         else if (g_iChatInputType == 0)
         {
             InputTextWidth = 100;
@@ -535,6 +545,21 @@ void CMsgWin::RequestDeleteCharacter()
     if (g_iChatInputType == 1)
     {
         g_pSinglePasswdInputBox->GetText(InputText[0]);
+
+        // VORTHANIA (28/09): dejar rastro de QUE se mando, sin mandar la
+        // contrasena al log. Solo el largo y si el cuadro tenia el foco.
+        //
+        // Ya me equivoque dos veces adivinando por que rebota. Si el largo
+        // sale 0, el problema es del cliente: lo que escribio no llego al
+        // cuadro. Si sale el largo correcto, el cliente hizo su parte y hay
+        // que mirar el servidor (la cuenta puede tener un SecurityCode
+        // cargado, y en ese caso OpenMU deja de aceptar la contrasena).
+        mu::log::Get("ui")->info(
+            "[Vorthania] borrar personaje: largo={} foco={} estado={}",
+            wcslen(InputText[0]),
+            g_pSinglePasswdInputBox->HaveFocus() ? 1 : 0,
+            g_pSinglePasswdInputBox->GetState());
+
         g_pSinglePasswdInputBox->SetText(NULL);
         g_pSinglePasswdInputBox->SetState(UISTATE_HIDE);
     }

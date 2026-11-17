@@ -54,6 +54,22 @@ namespace
     constexpr const wchar_t* kDarkLordLeadershipStatValue = L"25";
     constexpr int kDarkLordLeadershipTextId = 1738;
 
+    // VORTHANIA (26/09): clases que el servidor tiene apagadas.
+    //
+    // El recorte a Season 2 las deshabilito del lado del servidor
+    // (CanGetCreated = false), pero el cliente de Season 6 tiene la lista de
+    // clases escrita adentro y las muestra igual: no existe ningun paquete
+    // donde el servidor le diga al cliente cuales habilitar. El jugador las
+    // veia, las elegia, escribia el nombre, y recien al confirmar el servidor
+    // lo rechazaba sin decirle por que.
+    //
+    // El dia que se habiliten en el servidor, se sacan de aca y listo. Es el
+    // mismo criterio que el resto del recorte: todo es un interruptor.
+    constexpr bool EsClaseApagadaEnVorthania(int classIndex)
+    {
+        return classIndex == CLASS_SUMMONER || classIndex == CLASS_RAGEFIGHTER;
+    }
+
     constexpr int kJobButtonStartY = 131;
     constexpr int kJobButtonSummonerRow = 3;
     constexpr int kJobButtonRageFighterY = 246;
@@ -205,18 +221,38 @@ void CCharMakeWin::SetPosition(int nXCoord, int nYCoord)
     const int buttonHeight = m_abtnJob[0].GetHeight();
     int baseY = nYCoord + kJobButtonStartY;
 
+    // VORTHANIA: las clases apagadas no ocupan fila, y las que siguen suben.
+    // Sin esto quedarian dos huecos en la grilla -- uno donde iba Summoner y
+    // otro donde iba Rage Fighter -- y se veria como si faltara algo.
+    int fila = 0;
     for (int classIndex = 0; classIndex < 3; ++classIndex)
-        m_abtnJob[classIndex].SetPosition(baseX, baseY + classIndex * buttonHeight);
+    {
+        if (EsClaseApagadaEnVorthania(classIndex))
+            continue;
+        m_abtnJob[classIndex].SetPosition(baseX, baseY + fila * buttonHeight);
+        ++fila;
+    }
 
-    m_abtnJob[CLASS_SUMMONER].SetPosition(baseX, baseY + kJobButtonSummonerRow * buttonHeight);
+    if (!EsClaseApagadaEnVorthania(CLASS_SUMMONER))
+    {
+        m_abtnJob[CLASS_SUMMONER].SetPosition(baseX, baseY + fila * buttonHeight);
+    }
 
     baseY = nYCoord + kJobButtonRageFighterY;
-    m_abtnJob[CLASS_RAGEFIGHTER].SetPosition(baseX, baseY);
+    fila = 0;
+
+    if (!EsClaseApagadaEnVorthania(CLASS_RAGEFIGHTER))
+    {
+        m_abtnJob[CLASS_RAGEFIGHTER].SetPosition(baseX, baseY);
+        ++fila;
+    }
 
     for (int classIndex = CLASS_DARK; classIndex <= CLASS_DARK_LORD; ++classIndex)
     {
-        const int row = (classIndex - CLASS_DARK) + 1;
-        m_abtnJob[classIndex].SetPosition(baseX, baseY + row * buttonHeight);
+        if (EsClaseApagadaEnVorthania(classIndex))
+            continue;
+        m_abtnJob[classIndex].SetPosition(baseX, baseY + (fila + 1) * buttonHeight);
+        ++fila;
     }
 
     baseY = nYCoord + kOkButtonOffsetY;
@@ -245,6 +281,18 @@ void CCharMakeWin::Show(bool bShow)
 
     for (i = 0; i < MAX_CLASS; ++i)
         m_abtnJob[i].Show(bShow);
+
+    // VORTHANIA: y las apagadas no se muestran nunca. Va DESPUES del bucle de
+    // arriba, que las muestra todas. Deshabilitarlas no alcanzaba: el jugador
+    // igual las veia en gris y se preguntaba por que no puede elegirlas.
+    if (bShow)
+    {
+        for (i = 0; i < MAX_CLASS; ++i)
+        {
+            if (EsClaseApagadaEnVorthania(i))
+                m_abtnJob[i].Show(false);
+        }
+    }
     for (i = 0; i < 2; ++i)
         m_aBtn[i].Show(bShow);
 
@@ -257,9 +305,46 @@ void CCharMakeWin::Show(bool bShow)
         InputTextMax[0] = MAX_USERNAME_SIZE;
         if (g_iChatInputType == 1)
         {
+            // VORTHANIA (28/09): el nombre se escribia en NEGRO sobre el
+            // fondo oscuro del campo. Por eso no se leia nada.
+            //
+            // El cuadro nace en blanco (el constructor pone 255,255,255,255),
+            // pero Configure() termina aplicando TODOS los campos de
+            // InputBoxConfig, no solo los que uno escribe. Los que no se
+            // escriben toman el valor por defecto de la struct, y para el
+            // texto ese default es alpha 255 con R=G=B=0: negro opaco.
+            //
+            // O sea que pedir "limite 10 caracteres" repintaba el texto de
+            // negro de paso. La ventana de login no cae en esto porque usa
+            // sus propios cuadros y les pone el color a mano
+            // (LoginWin.cpp: SetTextColor(255, 255, 230, 210)).
+            //
+            // Se pide el color explicito -el mismo crema del login- en vez de
+            // confiar en un default. Una config parcial que pisa lo que no
+            // mencionas es una trampa que se vuelve a pagar cada vez que
+            // alguien agregue un campo nuevo a la struct.
             g_pSingleTextInputBox->Configure({
                 .textLimit = 10,
+                .textAlpha = 255,
+                .textR = 255,
+                .textG = 230,
+                .textB = 210,
             });
+
+            // VORTHANIA (26/09): mostrar el cuadro de texto.
+            //
+            // El bug: esta ventana llamaba a GiveFocus() pero nunca a
+            // SetState(UISTATE_NORMAL). El cuadro arranca en UISTATE_HIDE
+            // cuando se inicia el juego (Winmain.cpp) y nadie lo volvia a
+            // mostrar. Resultado: el foco lo tenia -por eso lo que escribias si
+            // llegaba y el personaje se creaba con el nombre correcto- pero el
+            // campo era invisible. Escribias a ciegas.
+            //
+            // Mas abajo, al cerrar la ventana, si hay un SetState(UISTATE_HIDE).
+            // O sea que estaba escrito el "esconder" y faltaba el "mostrar":
+            // la asimetria de siempre.
+            g_pSingleTextInputBox->SetText(nullptr);
+            g_pSingleTextInputBox->SetState(UISTATE_NORMAL);
             g_pSingleTextInputBox->GiveFocus();
         }
     }
@@ -302,6 +387,16 @@ void CCharMakeWin::UpdateDisplay()
     m_abtnJob[CLASS_SUMMONER].SetEnable(true);
 #endif //PBG_ADD_CHARACTERCARD
 
+    // VORTHANIA: va DESPUES del bloque de arriba a proposito, porque ese
+    // #else fuerza a Summoner a habilitado y lo pisaria.
+    for (int classIndex = 0; classIndex < MAX_CLASS; ++classIndex)
+    {
+        if (EsClaseApagadaEnVorthania(classIndex))
+        {
+            m_abtnJob[classIndex].SetEnable(false);
+        }
+    }
+
     const bool isDarkLord = (m_nSelJob == CLASS_DARK_LORD);
     m_asprBack[CMW_SPR_STAT].SetSize(0, isDarkLord ? kDarkLordStatHeight : kDefaultStatHeight, Y);
 
@@ -319,6 +414,12 @@ void CCharMakeWin::UpdateWhileActive(double dDeltaTick)
 {
     for (int classIndex = 0; classIndex < MAX_CLASS; ++classIndex)
     {
+        // VORTHANIA: cinturon y tiradores. Deshabilitar el boton deberia
+        // alcanzar, pero si algun dia IsClick() cambia de comportamiento, esto
+        // evita que se pueda elegir una clase que el servidor va a rechazar.
+        if (EsClaseApagadaEnVorthania(classIndex))
+            continue;
+
         if (!m_abtnJob[classIndex].IsClick())
             continue;
 

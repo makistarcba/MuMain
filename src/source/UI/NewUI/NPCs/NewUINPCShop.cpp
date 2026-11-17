@@ -361,7 +361,7 @@ bool SEASON3B::CNewUINPCShop::InventoryProcess()
         if (pPickedItem->GetSourceStorageType() == STORAGE_TYPE::INVENTORY)
         {
             const int iSourceIndex = pPickedItem->GetSourceLinealPos();
-            if (iSourceIndex >= MAX_EQUIPMENT_INDEX && iSourceIndex < MAX_MY_INVENTORY_EX_INDEX)
+            if (iSourceIndex >= 0 && iSourceIndex < MAX_MY_INVENTORY_EX_INDEX) // Vorthania: tambien se vende lo equipado
             {
                 SocketClient->ToGameServer()->SendSellItemToNpcRequest(iSourceIndex);
                 g_pNPCShop->SetSellingItem(true);

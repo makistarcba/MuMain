@@ -98,7 +98,12 @@ DWORD g_dwLatestMagicTick;
 const   float   AutoMouseLimitTime = (1.f * 60.f * 60.f);
 int   LoadingWorld = 0;
 int   ItemHelp = 0;
-int   MouseUpdateTime = 0;
+// Vorthania: MouseUpdateTime cuenta "cuadros de 25 FPS" (avanza FPS_ANIMATION_FACTOR por cuadro).
+// Antes sumaba 1 por cuadro: con el mouse apretado y FPS altos el cliente mandaba un pedido de
+// caminata casi en cada cuadro, y el anti-speedhack del servidor lo tomaba como speedhack
+// ("traveled 4 tiles in 45ms").
+extern float FPS_ANIMATION_FACTOR;
+float MouseUpdateTime = 0;
 int   MouseUpdateTimeMax = 6;
 // Latched when a click opens an NPC conversation while the button is still held.
 // The world click handler ignores the held button until it is physically released, so the
@@ -3015,7 +3020,9 @@ void MoveHero()
     if (!MouseOnWindow && false == g_pNewUISystem->CheckMouseUse())
     {
         bool Success = false;
-        if (MouseUpdateTime >= MouseUpdateTimeMax && !s_bIgnoreHeldClickAfterNpcTalk)
+        // Vorthania: como minimo un cuadro de 25 FPS (40 ms) entre pedidos, aun con
+        // MouseUpdateTimeMax = 0 (camino corto): a 25 FPS da lo mismo que el original.
+        if (MouseUpdateTime >= (std::max)(static_cast<float>(MouseUpdateTimeMax), 1.0f) - 0.001f && !s_bIgnoreHeldClickAfterNpcTalk)
         {
             if (!EnableFastInput)
             {
@@ -3307,7 +3314,7 @@ void MoveHero()
                 }
             }
         }
-        MouseUpdateTime++;
+        MouseUpdateTime += FPS_ANIMATION_FACTOR;
     }
 
     Attack(Hero);

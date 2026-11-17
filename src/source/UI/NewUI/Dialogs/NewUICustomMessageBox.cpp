@@ -22,6 +22,7 @@
 extern int DeleteIndex;
 extern int AppointStatus;
 extern bool LogOut;
+extern BOOL g_bGameServerConnected; // VORTHANIA
 
 char AppointType;
 
@@ -2343,7 +2344,12 @@ CALLBACK_RESULT SEASON3B::CSystemMenuMsgBox::GameOverBtnDown(class CNewUIMessage
         MUHelper::g_MuHelper.TriggerStop();
         LogOut = true;
         SocketClient->ToGameServer()->SendLogOut(LogOutType::CloseGame);
-        PostMessage(g_hWnd, WM_CLOSE, 0, 0);
+        // VORTHANIA: the server answers after its countdown (ReceiveLogOut, case 0) or refuses.
+        // The window is only closed right away when there is no server to answer.
+        if (!g_bGameServerConnected)
+        {
+            PostMessage(g_hWnd, WM_CLOSE, 0, 0);
+        }
         g_ConsoleDebug->Write(MCD_SEND, L"0xF1 [SendRequestLogOut] 0");
     }
 
@@ -2784,7 +2790,7 @@ bool SEASON3B::CChaosMixMenuMsgBox::Update()
 {
     m_BtnGeneralMix.Update();
     m_BtnChaosMix.Update();
-    m_BtnMix380.Update();
+    // VORTHANIA: sin mezcla 380 (receta desenganchada en el servidor)
     m_BtnCancel.Update();
 
     return true;
@@ -2815,11 +2821,7 @@ CALLBACK_RESULT SEASON3B::CChaosMixMenuMsgBox::LButtonUp(class CNewUIMessageBoxB
             g_MessageBox->SendEvent(pOwner, MSGBOX_EVENT_USER_CUSTOM_MIXMENU_CHAOSMIX);
             return CALLBACK_BREAK;
         }
-        if (pMsgBox->m_BtnMix380.IsMouseIn() == true)
-        {
-            g_MessageBox->SendEvent(pOwner, MSGBOX_EVENT_USER_CUSTOM_MIXMENU_MIX380);
-            return CALLBACK_BREAK;
-        }
+        // VORTHANIA: boton de mezcla 380 quitado
         if (pMsgBox->m_BtnCancel.IsMouseIn() == true)
         {
             g_MessageBox->SendEvent(pOwner, MSGBOX_EVENT_USER_COMMON_CANCEL);
@@ -2952,25 +2954,21 @@ void SEASON3B::CChaosMixMenuMsgBox::RenderTexts()
     g_pRenderText->RenderText(fPos_x, fPos_y + 1 * 15, szText, MSGBOX_WIDTH - 20.0f, 0, RT3_SORT_CENTER);
     mu_swprintf(szText, I18N::Game::Dinorant1015ItemsCloakOfInvisibility, Hero->ID);
     g_pRenderText->RenderText(fPos_x, fPos_y + 2 * 15, szText, MSGBOX_WIDTH - 20.0f, 0, RT3_SORT_CENTER);
-    mu_swprintf(szText, I18N::Game::FenrirSHornScrollOfBloodCondorSFeather, Hero->ID);
-    g_pRenderText->RenderText(fPos_x, fPos_y + 3 * 15, szText, MSGBOX_WIDTH - 20.0f, 0, RT3_SORT_CENTER);
+    // VORTHANIA: Fenrir, Scroll of Blood y Condor's Feather desenganchados en el servidor
 
     fPos_y += 100;
     mu_swprintf(szText, I18N::Game::ChaosDragonAxeChaosLightningStaff, Hero->ID);
     g_pRenderText->RenderText(fPos_x, fPos_y + 0 * 15, szText, MSGBOX_WIDTH - 20.0f, 0, RT3_SORT_CENTER);
     mu_swprintf(szText, I18N::Game::ChaosNatureBow, Hero->ID);
     g_pRenderText->RenderText(fPos_x, fPos_y + 1 * 15, szText, MSGBOX_WIDTH - 20.0f, 0, RT3_SORT_CENTER);
-
-    fPos_y += 85;
-    mu_swprintf(szText, I18N::Game::Add380ItemOption, Hero->ID);
-    g_pRenderText->RenderText(fPos_x, fPos_y + 0 * 15, szText, MSGBOX_WIDTH - 20.0f, 0, RT3_SORT_CENTER);
+    // VORTHANIA: texto "Add 380 item option" quitado
 }
 
 void SEASON3B::CChaosMixMenuMsgBox::RenderButtons()
 {
     m_BtnGeneralMix.Render();
     m_BtnChaosMix.Render();
-    m_BtnMix380.Render();
+    // VORTHANIA: m_BtnMix380 no se dibuja
     m_BtnCancel.Render();
 }
 

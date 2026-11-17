@@ -2,6 +2,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include <set>      // VORTHANIA
+#include <string>   // VORTHANIA
 #include "LoadData.h"
 
 #include "Render/Sprites/GlobalBitmap.h"
@@ -37,7 +39,16 @@ void CLoadData::AccessModel(int Type, const wchar_t* Dir, const wchar_t* FileNam
 
     if (Success == false)
     {
-        g_ErrorReport.Write(L"AccessModel failed: %ls%ls (Type=%d)\r\n", Dir, Name, Type);
+        // VORTHANIA: el Data que trae MuMain esta incompleto a proposito, asi
+        // que cada carga de mapa escupia cientos de estas lineas y el log se
+        // volvia ilegible. Ahora cada modelo faltante se anota UNA vez.
+        static std::set<std::wstring> s_yaAvisados;
+        std::wstring clave(Dir);
+        clave += Name;
+        if (s_yaAvisados.insert(clave).second)
+        {
+            g_ErrorReport.Write(L"AccessModel failed: %ls%ls (Type=%d)\r\n", Dir, Name, Type);
+        }
 
         if (wcscmp(FileName, L"Monster") == 0 || wcscmp(FileName, L"Player") == 0 || wcscmp(FileName, L"PlayerTest") == 0 || wcscmp(FileName, L"Angel") == 0)
         {

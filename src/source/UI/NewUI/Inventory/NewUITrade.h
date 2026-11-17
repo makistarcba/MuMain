@@ -95,6 +95,9 @@ namespace SEASON3B
 
         float GetLayerDepth();	//. 2.1f
 
+        // Vorthania: clic derecho en un item del inventario lo pasa al trade (como baul y Chaos Machine).
+        bool ProcessMyInvenItemAutoMove(CNewUIInventoryCtrl* sourceCtrl);
+
         static void UI2DEffectCallback(LPVOID pClass, DWORD dwParamA, DWORD dwParamB);
 
         // Returns the other player's (grid-based) trade inventory control.

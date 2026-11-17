@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstring>
 
+#include <set>   // VORTHANIA: g_musicaQueNoSePudoAbrir
 // S_OK, S_FALSE are now provided by PlatformTypes.h (via PCH)
 #ifndef E_INVALIDARG
 #define E_INVALIDARG 0x80070057L
@@ -193,10 +194,17 @@ void MiniAudioBackend::LoadSound(ESound buffer, const wchar_t* filename, int cha
 
         if (result != MA_SUCCESS)
         {
-            mu::log::Get("audio")->error(
-                "AUDIO: MiniAudioBackend::LoadSound -- ma_sound_init_from_file failed for '{}' "
-                "channel {} ({})",
-                AudioPathToUtf8(filename), ch, static_cast<int>(result));
+            // VORTHANIA: Data/Sound no existe en este build, asi que fallan
+            // unos 200 archivos en cada carga de mapa. Una linea por archivo
+            // y listo; si no, un error de verdad queda enterrado.
+            static std::set<std::string> s_sonidosQueFallaron;
+            if (s_sonidosQueFallaron.insert(utf8Path).second)
+            {
+                mu::log::Get("audio")->error(
+                    "AUDIO: MiniAudioBackend::LoadSound -- ma_sound_init_from_file failed for '{}' "
+                    "channel {} ({}). No se vuelve a avisar por este archivo.",
+                    AudioPathToUtf8(filename), ch, static_cast<int>(result));
+            }
             // Uninit any channels already loaded for this slot
             for (int prev = 0; prev < ch; ++prev)
             {
@@ -514,6 +522,20 @@ void MiniAudioBackend::SetMasterVolume(long vol)
 // to ma_sound_init_from_file(). No new Win32 calls — pure std::string manipulation.
 // m_currentMusicName stores the normalized path for the same-track guard.
 // ---------------------------------------------------------------------------
+namespace
+{
+// VORTHANIA (26/09): archivos de musica que ya fallaron una vez.
+//
+// MuMain no trae la carpeta Data/Music. Sin esto, el juego pide el tema del
+// mapa en CADA CUADRO, falla, y escribe una linea de error: unas 125 por
+// segundo. El MuError.log se llena de decenas de miles de lineas identicas y
+// cualquier error de verdad queda enterrado ahi adentro -- que es como
+// terminamos sin poder diagnosticar un crasheo.
+//
+// Se anota el que falla y no se vuelve a intentar. Se loguea una sola vez.
+std::set<std::string> g_musicaQueNoSePudoAbrir;
+}
+
 void MiniAudioBackend::PlayMusic(const char* name, bool enforce)
 {
     if (!m_initialized || name == nullptr)
@@ -552,12 +574,23 @@ void MiniAudioBackend::PlayMusic(const char* name, bool enforce)
     // (common in server-hosted MU setups) due to file open + ID3 header parse + decoder init
     // on the calling thread. Acceptable for BGM at scene transitions on SSD; known limitation
     // for HDD/network installs. Deferred to 5.2.x if a non-blocking init path is needed.
+    // VORTHANIA: si este archivo ya fallo antes, no se reintenta ni se vuelve a
+    // loguear. Va aca y no mas arriba para que la musica anterior igual se
+    // detenga al cambiar de mapa, que es lo que corresponde.
+    if (g_musicaQueNoSePudoAbrir.count(normalizedName) > 0)
+    {
+        return;
+    }
+
     ma_result result = ma_sound_init_from_file(&m_engine, normalizedName.c_str(), MA_SOUND_FLAG_STREAM, nullptr,
                                                nullptr, &m_musicSound);
 
     if (result != MA_SUCCESS)
     {
-        mu::log::Get("audio")->error("AUDIO: MiniAudioBackend::PlayMusic -- failed to init stream '{}' ({})", name,
+        // VORTHANIA: una sola linea por archivo, no una por cuadro.
+        g_musicaQueNoSePudoAbrir.insert(normalizedName);
+        mu::log::Get("audio")->error("AUDIO: MiniAudioBackend::PlayMusic -- failed to init stream '{}' ({}). "
+                                     "No se vuelve a intentar con este archivo.", name,
                                      static_cast<int>(result));
         return;
     }

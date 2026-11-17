@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Core/Utilities/Vigilante.h" // VORTHANIA
 #include "GameLogic/Combat/SkillExecution.h"
 
 #include <thread>
@@ -167,6 +168,11 @@ namespace MUHelper
 
     void CMuHelper::Work()
     {
+        // VORTHANIA: el MU Helper NO corre en su propio hilo. WorkLoop tiene
+        // firma de TimerProc y lo dispara un SetTimer, o sea que esto pasa en
+        // el hilo principal, entre cuadro y cuadro. Si el cliente se cuelga
+        // aca, el vigilante lo va a decir con todas las letras.
+        vorthania::MarcarEtapa("MU Helper: Work");
         try
         {
             if (!ActivatePet())

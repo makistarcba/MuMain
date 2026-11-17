@@ -213,6 +213,33 @@ void CErrorReport::WriteSoundCardInfo(void)
     for (const auto& name : names) Write(L"Description \t\t: %hs\r\n", name.c_str());
 }
 
+// VORTHANIA: GetVersionEx MIENTE. Desde Windows 8.1, si el ejecutable no
+// declara compatibilidad en su manifiesto, el sistema le contesta 6.2 (o sea
+// Windows 8) a cualquier Windows 8.1, 10 u 11. Por eso los MuError.log decian
+// "Unknown 6.2 Build 9200" en maquinas con Windows 11.
+//
+// RtlGetVersion, que vive en ntdll, no aplica esa capa de compatibilidad y
+// devuelve la version de verdad. Se busca en tiempo de ejecucion para no
+// agregar una dependencia de link.
+static void ObtenerVersionReal(OSVERSIONINFOW* info)
+{
+    ZeroMemory(info, sizeof(OSVERSIONINFOW));
+    info->dwOSVersionInfoSize = sizeof(OSVERSIONINFOW);
+
+    typedef LONG(WINAPI * FnRtlGetVersion)(void*);
+    if (HMODULE ntdll = ::GetModuleHandleW(L"ntdll.dll"))
+    {
+        auto rtl = reinterpret_cast<FnRtlGetVersion>(::GetProcAddress(ntdll, "RtlGetVersion"));
+        if (rtl != nullptr && rtl(info) == 0)
+        {
+            return;
+        }
+    }
+
+    info->dwOSVersionInfoSize = sizeof(OSVERSIONINFOW);
+    ::GetVersionExW(info);
+}
+
 void GetOSVersion(ER_SystemInfo* si)
 {
     const wchar_t* lpszUnknown = L"Unknown";
@@ -220,7 +247,7 @@ void GetOSVersion(ER_SystemInfo* si)
 
     OSVERSIONINFO osiOne;
     osiOne.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-    GetVersionEx(&osiOne);
+    ObtenerVersionReal(&osiOne); // VORTHANIA: la de verdad, no la del manifiesto
 
     int iBuildNumberType = 0;
     mu_swprintf(si->m_lpszOS, L"%ls %d.%d ", lpszUnknown, osiOne.dwMajorVersion, osiOne.dwMinorVersion);
@@ -306,6 +333,21 @@ void GetOSVersion(ER_SystemInfo* si)
             wcscpy(si->m_lpszOS, L"Windows 2003 family ");
             break;
         }
+        break;
+    // VORTHANIA: faltaban todos los Windows posteriores a 2003, por eso
+    // hasta un Windows 11 salia como "Unknown".
+    case 6:
+        switch (osiOne.dwMinorVersion)
+        {
+        case 0: wcscpy(si->m_lpszOS, L"Windows Vista "); break;
+        case 1: wcscpy(si->m_lpszOS, L"Windows 7 "); break;
+        case 2: wcscpy(si->m_lpszOS, L"Windows 8 "); break;
+        case 3: wcscpy(si->m_lpszOS, L"Windows 8.1 "); break;
+        }
+        break;
+    case 10:
+        // Windows 11 se reporta como 10.0; lo que los separa es el build.
+        wcscpy(si->m_lpszOS, osiOne.dwBuildNumber >= 22000 ? L"Windows 11 " : L"Windows 10 ");
         break;
     }
     switch (iBuildNumberType)
@@ -604,10 +646,18 @@ void MuGetSystemInfo(ER_SystemInfo* si)
     GetCPUInfo(si);
 
     // Memory
-    MEMORYSTATUS ms;
-    ms.dwLength = sizeof(MEMORYSTATUS);
-    GlobalMemoryStatus(&ms);
-    si->m_iMemorySize = ms.dwTotalPhys;
+    // VORTHANIA: MEMORYSTATUS.dwTotalPhys es un DWORD de 32 bits y en un
+    // proceso x86 el valor se satura: una maquina de 16 GB reportaba 2048 MB.
+    // MEMORYSTATUSEX usa 64 bits y dice la verdad. Importa porque el
+    // encabezado del MuError.log es lo primero que uno mira para decidir si
+    // el problema es la maquina del jugador.
+    MEMORYSTATUSEX ms;
+    ZeroMemory(&ms, sizeof(ms));
+    ms.dwLength = sizeof(MEMORYSTATUSEX);
+    if (::GlobalMemoryStatusEx(&ms))
+    {
+        si->m_iMemorySize = static_cast<std::int64_t>(ms.ullTotalPhys);
+    }
 
     // OS
     GetOSVersion(si);

@@ -430,7 +430,11 @@ void CNewUITrade::ProcessMyInvenCtrl()
     if (NULL == m_pMyInvenCtrl)
         return;
 
-    if (SEASON3B::IsPress(VK_LBUTTON))
+    // Vorthania: tambien al soltar el clic, como el baul (NewUIStorageInventory). El inventario
+    // (capa 4.2, se procesa antes que el trade, capa 2.1) se come el IsPress cuando hay un item
+    // agarrado y el trade esta abierto (NewUIMyInventory::UpdateMouseEvent devuelve false), asi
+    // que el trade nunca veia el clic y no se podia poner ningun item.
+    if (SEASON3B::IsPress(VK_LBUTTON) || SEASON3B::IsRelease(VK_LBUTTON))
     {
         CNewUIPickedItem* pPickedItem = CNewUIInventoryCtrl::GetPickedItem();
         if (NULL == pPickedItem)
@@ -461,6 +465,56 @@ void CNewUITrade::ProcessMyInvenCtrl()
                 SendRequestItemToTrade(pItemObj, nSrcIndex, nDstIndex);
         }
     }
+}
+
+// Vorthania: clic derecho en un item del inventario -> primer lugar libre del trade.
+// Mismo camino que CNewUIMixInventory::AutoMoveItem; el trade no lo tenia.
+bool CNewUITrade::ProcessMyInvenItemAutoMove(CNewUIInventoryCtrl* sourceCtrl)
+{
+    if (CNewUIInventoryCtrl::GetPickedItem() != nullptr)
+        return false;
+    if (sourceCtrl == nullptr || m_pMyInvenCtrl == nullptr
+        || sourceCtrl->GetStorageType() != STORAGE_TYPE::INVENTORY)
+        return false;
+
+    ITEM* pItemObj = sourceCtrl->FindItemAtPt(MouseX, MouseY);
+    if (pItemObj == nullptr)
+        return false;
+
+    if (::IsTradeBan(pItemObj))
+    {
+        g_pSystemLogBox->AddText(I18N::Game::TheseItemsCannotBeTraded, SEASON3B::TYPE_ERROR_MESSAGE);
+        return true;
+    }
+
+    const ITEM_ATTRIBUTE* pItemAttr = &ItemAttribute[pItemObj->Type];
+    const int iTargetIndex = m_pMyInvenCtrl->FindEmptySlot(pItemAttr->Width, pItemAttr->Height);
+    if (iTargetIndex < 0 || !m_pMyInvenCtrl->CanMove(iTargetIndex, pItemObj))
+        return false;
+
+    if (!CNewUIInventoryCtrl::CreatePickedItem(sourceCtrl, pItemObj))
+        return false;
+
+    CNewUIPickedItem* pPickedItem = CNewUIInventoryCtrl::GetPickedItem();
+    if (pPickedItem == nullptr)
+        return false;
+
+    sourceCtrl->RemoveItem(pItemObj);
+    pPickedItem->HidePickedItem();
+
+    // Igual que al arrastrar: cambiar lo ofrecido destilda el OK propio.
+    m_bMyConfirm = false;
+    SocketClient->ToGameServer()->SendTradeButtonStateChange(TradeButtonState::Unchecked);
+
+    if (!SendRequestEquipmentItem(STORAGE_TYPE::INVENTORY, pPickedItem->GetSourceLinealPos(), pItemObj,
+                                  STORAGE_TYPE::TRADE, iTargetIndex))
+    {
+        CNewUIInventoryCtrl::BackupPickedItem();
+        return false;
+    }
+
+    PlayBuffer(SOUND_GET_ITEM01);
+    return true;
 }
 
 void CNewUITrade::SendRequestItemToTrade(ITEM* pItemObj, int nInvenIndex,
@@ -591,7 +645,13 @@ void CNewUITrade::ProcessToReceiveTradeRequest(char* pbyYourID)
         return;
     }
 
-    CMultiLanguage::ConvertFromUtf8(m_szYourID, pbyYourID);
+    // Vorthania: el nombre llega en 10 bytes SIN terminador cuando tiene justo 10 letras
+    // (ej. "Sorpresita"). Sin largo maximo, MultiByteToWideChar seguia leyendo memoria
+    // despues del paquete y escribia de mas en m_szYourID[11]: el cliente que recibia el
+    // pedido de trade se colgaba o se cerraba sin llegar a mostrar el cartel.
+    memset(m_szYourID, 0, sizeof(m_szYourID));
+    CMultiLanguage::ConvertFromUtf8(m_szYourID, pbyYourID, MAX_USERNAME_SIZE);
+    m_szYourID[MAX_USERNAME_SIZE] = L'\0';
 
     SEASON3B::CreateMessageBox(MSGBOX_LAYOUT_CLASS(SEASON3B::CTradeMsgBoxLayout));
 

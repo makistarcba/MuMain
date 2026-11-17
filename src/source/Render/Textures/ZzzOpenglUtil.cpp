@@ -1254,7 +1254,7 @@ void RenderBitmapRotate(int Texture, float x, float y, float Width, float Height
     mu::GetRenderer().RenderQuad2D(vertices, static_cast<std::uint32_t>(Texture));
 }
 
-void RenderBitRotate(int Texture, float x, float y, float Width, float Height, float Rotate)
+void RenderBitRotate(int Texture, float x, float y, float Width, float Height, float Rotate, float Alpha)
 {
     x = ConvertX(x);
     y = ConvertY(y);
@@ -1293,11 +1293,16 @@ void RenderBitRotate(int Texture, float x, float y, float Width, float Height, f
     const float halfW = WindowWidth / 2.f;
     const float halfH = WindowHeight / 2.f;
 
+    // VORTHANIA: el color va en ARGB, igual que en RenderColor mas arriba.
+    const float clampedAlpha = (Alpha < 0.f) ? 0.f : ((Alpha > 1.f) ? 1.f : Alpha);
+    const std::uint32_t tint =
+        (static_cast<std::uint32_t>(clampedAlpha * 255.0f) << 24) | 0x00FFFFFFu;
+
     const mu::Vertex2D vertices[4] = {
-        {p2[0][0] + halfW, p2[0][1] + halfH, 0.0f, 0.0f, 0xFFFFFFFFu},
-        {p2[1][0] + halfW, p2[1][1] + halfH, 0.0f, 1.0f, 0xFFFFFFFFu},
-        {p2[2][0] + halfW, p2[2][1] + halfH, 1.0f, 1.0f, 0xFFFFFFFFu},
-        {p2[3][0] + halfW, p2[3][1] + halfH, 1.0f, 0.0f, 0xFFFFFFFFu},
+        {p2[0][0] + halfW, p2[0][1] + halfH, 0.0f, 0.0f, tint},
+        {p2[1][0] + halfW, p2[1][1] + halfH, 0.0f, 1.0f, tint},
+        {p2[2][0] + halfW, p2[2][1] + halfH, 1.0f, 1.0f, tint},
+        {p2[3][0] + halfW, p2[3][1] + halfH, 1.0f, 0.0f, tint},
     };
     mu::GetRenderer().RenderQuad2D(vertices, static_cast<std::uint32_t>(Texture));
 }

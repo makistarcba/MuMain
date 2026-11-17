@@ -6,6 +6,34 @@ if(MINGW)
     add_compile_options(-Wa,-mbig-obj)
 endif()
 
+# ----------------------------------------------------------------------------
+# VORTHANIA: simbolos tambien en Release.
+#
+# Sin .pdb, cuando el cliente se cuelga lo unico que se puede escribir son
+# direcciones sueltas: "Main.exe+0x3F21A0". Y en 32 bits es peor todavia, porque
+# el compilador tira el puntero de marco (/Oy) y la pila deja de poder
+# recorrerse: se saca UN renglon y se corta. O sea: se sabe que esta colgado y
+# no donde, que es lo mismo que no saber nada.
+#
+# /Zi genera el .pdb, /DEBUG hace que el enlazador lo emita. /DEBUG por si solo
+# apaga dos optimizaciones del enlazador, asi que se las vuelve a pedir a mano
+# con /OPT:REF y /OPT:ICF; el codigo generado sigue siendo el mismo Release de
+# antes. /Oy- conserva el puntero de marco: cuesta un pelo de rendimiento y hace
+# que la pila se pueda recorrer siempre, no solo cuando el .pdb esta a mano.
+#
+# El .pdb NO va en el paquete de los jugadores: es grande y no lo necesitan.
+# Queda en la carpeta del build, que es donde se leen los cuelgues.
+# ----------------------------------------------------------------------------
+if (MSVC)
+    add_compile_options(
+        $<$<CONFIG:Release>:/Zi>
+        $<$<CONFIG:Release>:/Oy->)
+    add_link_options(
+        $<$<CONFIG:Release>:/DEBUG>
+        $<$<CONFIG:Release>:/OPT:REF>
+        $<$<CONFIG:Release>:/OPT:ICF>)
+endif()
+
 #Set global C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

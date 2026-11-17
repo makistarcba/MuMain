@@ -2483,7 +2483,7 @@ CALLBACK_RESULT SEASON3B::CHighValueItemCheckMsgBoxLayout::OkBtnDown(class CNewU
         }
     }
 
-    if (iSourceIndex >= MAX_EQUIPMENT_INDEX && iSourceIndex < MAX_MY_INVENTORY_EX_INDEX)
+    if (iSourceIndex >= 0 && iSourceIndex < MAX_MY_INVENTORY_EX_INDEX) // Vorthania: tambien se vende lo equipado
     {
         SocketClient->ToGameServer()->SendSellItemToNpcRequest(iSourceIndex);
         g_pNPCShop->SetSellingItem(true);
