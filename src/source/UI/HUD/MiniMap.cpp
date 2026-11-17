@@ -27,7 +27,16 @@
 #include <RmlUi/Core/ElementDocument.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
+#include <sstream>
+#include <string>
+#include <vector>
+
+// VORTHANIA: to walk from the map.
+#include "Engine/AI/ZzzAI.h"            // PathFinding2
+#include "Engine/Object/ZzzInterface.h" // SendMove
+#include "Render/Terrain/ZzzLodTerrain.h" // TerrainWall
 
 extern BYTE m_OccupationState;
 
@@ -91,6 +100,169 @@ bool MarkerDrawn(const MINI_MAP& data)
         return true;
     return !(gMapManager.WorldActive == WD_34CRYWOLF_1ST && m_OccupationState > 0) ||
            (data.Location[0] == 228 && data.Location[1] == 48 && gMapManager.WorldActive == WD_34CRYWOLF_1ST);
+}
+
+// ---------------------------------------------------------------------------------------------
+// VORTHANIA: click on the map to walk there, the route drawn on the map and the spots
+// (Data\Local\VorthaniaSpots.txt, written by the same script that creates the spawns in the
+// database). Ported from the old client's NewUIMiniMap.cpp; the walking logic is the same.
+// ---------------------------------------------------------------------------------------------
+bool g_VorthAutoMove = false;
+int g_VorthAutoMoveX = 0;
+int g_VorthAutoMoveY = 0;
+int g_VorthAutoMoveTries = 0;
+// Where the stretch we asked for ends: if the hero stops anywhere else, the player took over.
+int g_VorthOurPathEnd[2] = {-1, -1};
+
+void VorthRememberOurPath()
+{
+    const int n = static_cast<int>(Hero->Path.PathNum);
+    if (n > 0 && n <= MAX_PATH_FIND)
+    {
+        g_VorthOurPathEnd[0] = static_cast<int>(Hero->Path.PathX[n - 1]);
+        g_VorthOurPathEnd[1] = static_cast<int>(Hero->Path.PathY[n - 1]);
+    }
+    else
+    {
+        g_VorthOurPathEnd[0] = -1;
+        g_VorthOurPathEnd[1] = -1;
+    }
+}
+
+bool VorthWalkable(int mapX, int mapY)
+{
+    if (mapX < 0 || mapX > 255 || mapY < 0 || mapY > 255)
+        return false;
+    const WORD att = TerrainWall[(mapY * 256) + mapX];
+    if ((att & TW_NOMOVE) == TW_NOMOVE)
+        return false;
+    if ((att & TW_NOGROUND) == TW_NOGROUND)
+        return false;
+    return true;
+}
+
+// A map tile (PositionX, PositionY) as a window pixel: the centre of a zero-sized marker, so it
+// follows exactly the same turn as the NPC icons.
+UI::MiniMap::Point VorthMapToWindow(const UI::MiniMap::Screen& screen, float heroX, float heroY, float tileX,
+                                    float tileY)
+{
+    const float length = UI::MiniMap::MapLength;
+    const float pointY = (tileX / 256.f) * length;
+    const float pointX = (tileY / 256.f) * length;
+    return UI::MiniMap::MarkerQuad(screen, heroX, heroY, pointX, pointY, 0.f, 0.f, length,
+                                   UI::MiniMap::MapRotation, false)
+        .quad.topLeft;
+}
+
+// The inverse: three known tiles give the 2x2 matrix to the window, which is inverted (no hand
+// inverted rotation, where a sign is easy to get wrong).
+bool VorthWindowToMap(const UI::MiniMap::Screen& screen, float heroX, float heroY, float wx, float wy, int& outX,
+                      int& outY)
+{
+    const UI::MiniMap::Point o = VorthMapToWindow(screen, heroX, heroY, 0.f, 0.f);
+    const UI::MiniMap::Point a = VorthMapToWindow(screen, heroX, heroY, 256.f, 0.f);
+    const UI::MiniMap::Point b = VorthMapToWindow(screen, heroX, heroY, 0.f, 256.f);
+    const float m00 = a.x - o.x;
+    const float m01 = b.x - o.x;
+    const float m10 = a.y - o.y;
+    const float m11 = b.y - o.y;
+    const float det = (m00 * m11) - (m01 * m10);
+    if (std::fabs(det) < 0.00001f)
+        return false;
+    const float rx = wx - o.x;
+    const float ry = wy - o.y;
+    const float u = ((m11 * rx) - (m01 * ry)) / det;
+    const float v = ((m00 * ry) - (m10 * rx)) / det;
+    const int mapX = static_cast<int>((u * 256.f) + 0.5f);
+    const int mapY = static_cast<int>((v * 256.f) + 0.5f);
+    if (mapX < 0 || mapX > 255 || mapY < 0 || mapY > 255)
+        return false;
+    outX = mapX;
+    outY = mapY;
+    return true;
+}
+
+constexpr const char* VORTH_COL_ROUTE = "#FFC832";       // the stretch the path finder computed
+constexpr const char* VORTH_COL_REST = "#8A6A20";        // from there to the destination
+constexpr const char* VORTH_COL_DESTINATION = "#FFFFFF"; // the destination cross
+constexpr const char* VORTH_COL_HOVER = "#6A7A8A";       // where a click would go
+constexpr const char* VORTH_COL_SPOT = "#64D2FF";        // a spot
+constexpr const char* VORTH_COL_SPOT_7 = "#FFA000";      // a spot of 7, the strongest of the map
+
+void VorthLine(std::vector<MiniMapLineEntry>& out, UI::MiniMap::Point p, UI::MiniMap::Point q, float thickness,
+               const char* color)
+{
+    const float dx = q.x - p.x;
+    const float dy = q.y - p.y;
+    const float length = std::sqrt(dx * dx + dy * dy);
+    if (length < 0.5f)
+        return;
+    const float nx = (-dy / length) * thickness * 0.5f;
+    const float ny = (dx / length) * thickness * 0.5f;
+    UI::MiniMap::Quad quad;
+    quad.topLeft = {p.x + nx, p.y + ny};
+    quad.topRight = {q.x + nx, q.y + ny};
+    quad.bottomLeft = {p.x - nx, p.y - ny};
+    out.push_back({MatrixText(UI::MiniMap::ElementToQuad(quad, 1.f, 1.f)), color});
+}
+
+void VorthCross(std::vector<MiniMapLineEntry>& out, UI::MiniMap::Point c, float r, float thickness, const char* color)
+{
+    VorthLine(out, {c.x - r, c.y - r}, {c.x + r, c.y + r}, thickness, color);
+    VorthLine(out, {c.x - r, c.y + r}, {c.x + r, c.y - r}, thickness, color);
+}
+
+void VorthDiamond(std::vector<MiniMapLineEntry>& out, UI::MiniMap::Point c, float r, float thickness, const char* color)
+{
+    VorthLine(out, {c.x, c.y - r}, {c.x + r, c.y}, thickness, color);
+    VorthLine(out, {c.x + r, c.y}, {c.x, c.y + r}, thickness, color);
+    VorthLine(out, {c.x, c.y + r}, {c.x - r, c.y}, thickness, color);
+    VorthLine(out, {c.x - r, c.y}, {c.x, c.y - r}, thickness, color);
+}
+
+// Format, one spot per line: map x y count monster name. Lines starting with # are comments.
+struct VorthSpot
+{
+    int map = 0;
+    int x = 0;
+    int y = 0;
+    int count = 0;
+    std::wstring name;
+};
+
+std::vector<VorthSpot> g_VorthSpots;
+bool g_VorthSpotsRead = false;
+
+void VorthLoadSpots()
+{
+    if (g_VorthSpotsRead)
+        return;
+    // Tried once: without the file the map works the same, without spots.
+    g_VorthSpotsRead = true;
+
+    const std::optional<std::string> text = Content::ReadFile(std::filesystem::path(L"Data\\Local\\VorthaniaSpots.txt"));
+    if (!text)
+        return;
+
+    std::istringstream lines(*text);
+    std::string line;
+    while (std::getline(lines, line))
+    {
+        if (line.empty() || line[0] == '#' || line[0] == '\r')
+            continue;
+        int map = 0, x = 0, y = 0, count = 0;
+        char name[96] = {0};
+        if (std::sscanf(line.c_str(), "%d %d %d %d %95[^\r\n]", &map, &x, &y, &count, name) < 4)
+            continue;
+        VorthSpot spot;
+        spot.map = map;
+        spot.x = x;
+        spot.y = y;
+        spot.count = count;
+        for (const char* c = name; *c != 0; ++c)
+            spot.name.push_back(static_cast<wchar_t>(static_cast<unsigned char>(*c)));
+        g_VorthSpots.push_back(std::move(spot));
+    }
 }
 } // namespace
 
@@ -180,6 +352,15 @@ bool mu::ui::window::CMiniMap::Render()
 bool mu::ui::window::CMiniMap::Update()
 {
     SyncRmlModel();
+
+    // VORTHANIA
+    if (m_PendingWalk)
+    {
+        m_PendingWalk = false;
+        if (IsVisible())
+            WalkToWindowPoint(m_PendingWalkX, m_PendingWalkY);
+    }
+    UpdateAutoMove();
 
     if (m_PendingClose)
     {
@@ -292,6 +473,20 @@ void mu::ui::window::CMiniMap::BindRmlModel(Rml::DataModelConstructor& c, MiniMa
 
     c.RegisterArray<std::vector<Rml::String>>();
     c.Bind("side_lines", &model.sideLines);
+
+    // VORTHANIA
+    auto vline = c.RegisterStruct<MiniMapLineEntry>();
+    vline.RegisterMember("transform", &MiniMapLineEntry::transform);
+    vline.RegisterMember("color", &MiniMapLineEntry::color);
+    c.RegisterArray<std::vector<MiniMapLineEntry>>();
+    c.Bind("vorth_lines", &model.vorthLines);
+    c.BindEventCallback("minimap_walk",
+                        [this](Rml::DataModelHandle, Rml::Event& event, const Rml::VariantList&)
+                        {
+                            m_PendingWalk = true;
+                            m_PendingWalkX = event.GetParameter<float>("mouse_x", 0.f);
+                            m_PendingWalkY = event.GetParameter<float>("mouse_y", 0.f);
+                        });
     c.RegisterArray<std::vector<float>>();
 
     c.Bind("hint_visible", &model.hintVisible);
@@ -440,6 +635,8 @@ void mu::ui::window::CMiniMap::SyncMap()
         model.markers = std::move(markers);
         m_RmlView.MarkDirty("markers");
     }
+
+    SyncVorthania(screen, heroX, heroY); // VORTHANIA
 }
 
 void mu::ui::window::CMiniMap::SyncHint()
@@ -476,12 +673,223 @@ void mu::ui::window::CMiniMap::SyncHint()
         }
     }
 
-    Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintVisible, "hint_visible", found);
+    // VORTHANIA: no NPC under the pointer -> the spot under it, if any.
     if (!found)
+    {
+        if (!SyncSpotHint())
+            Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintVisible, "hint_visible", false);
         return;
+    }
+    Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintVisible, "hint_visible", found);
     Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintText, "hint_text", StringUtils::WideToNarrow(name.c_str()));
     Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintLeft, "hint_left", left);
     Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintTop, "hint_top", top);
     Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintWidth, "hint_width", width);
     Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintHeight, "hint_height", height);
+}
+
+// ---------------------------------------------------------------------------------------------
+// VORTHANIA
+// ---------------------------------------------------------------------------------------------
+void mu::ui::window::CMiniMap::SyncVorthania(const UI::MiniMap::Screen& screen, float heroX, float heroY)
+{
+    std::vector<MiniMapLineEntry> lines;
+    const UI::MiniMap::Point hero = VorthMapToWindow(screen, heroX, heroY, static_cast<float>(Hero->PositionX),
+                                                     static_cast<float>(Hero->PositionY));
+
+    // The spots of this map, under the route.
+    VorthLoadSpots();
+    const int world = static_cast<int>(gMapManager.WorldActive);
+    for (const VorthSpot& spot : g_VorthSpots)
+    {
+        if (spot.map != world)
+            continue;
+        const UI::MiniMap::Point p =
+            VorthMapToWindow(screen, heroX, heroY, static_cast<float>(spot.x), static_cast<float>(spot.y));
+        const bool seven = spot.count >= 7;
+        VorthDiamond(lines, p, seven ? 5.f : 3.5f, seven ? 2.f : 1.5f, seven ? VORTH_COL_SPOT_7 : VORTH_COL_SPOT);
+    }
+
+    // a) Where a click would go now (the only thing seen before the click: the click closes the map).
+    int hoverX = 0, hoverY = 0;
+    if (VorthWindowToMap(screen, heroX, heroY, g_fWindowMouseX, g_fWindowMouseY, hoverX, hoverY) &&
+        VorthWalkable(hoverX, hoverY))
+    {
+        const UI::MiniMap::Point p =
+            VorthMapToWindow(screen, heroX, heroY, static_cast<float>(hoverX), static_cast<float>(hoverY));
+        VorthLine(lines, hero, p, 1.5f, VORTH_COL_HOVER);
+        VorthCross(lines, p, 4.f, 1.5f, VORTH_COL_HOVER);
+    }
+
+    // b) The active route: the computed stretch (at most MAX_PATH_FIND steps) strong, the rest faint.
+    if (g_VorthAutoMove)
+    {
+        const UI::MiniMap::Point destination = VorthMapToWindow(
+            screen, heroX, heroY, static_cast<float>(g_VorthAutoMoveX), static_cast<float>(g_VorthAutoMoveY));
+        UI::MiniMap::Point previous = hero;
+        const int from = static_cast<int>(Hero->Path.CurrentPath);
+        const int to = static_cast<int>(Hero->Path.PathNum);
+        for (int n = from; n < to && n < MAX_PATH_FIND; ++n)
+        {
+            const UI::MiniMap::Point next = VorthMapToWindow(screen, heroX, heroY, static_cast<float>(Hero->Path.PathX[n]),
+                                                             static_cast<float>(Hero->Path.PathY[n]));
+            VorthLine(lines, previous, next, 2.5f, VORTH_COL_ROUTE);
+            previous = next;
+        }
+        VorthLine(lines, previous, destination, 1.5f, VORTH_COL_REST);
+        VorthCross(lines, destination, 6.f, 2.5f, VORTH_COL_DESTINATION);
+    }
+
+    MiniMapRmlModel& model = m_RmlView.GetModel();
+    const bool same = model.vorthLines.size() == lines.size() &&
+                      std::equal(lines.begin(), lines.end(), model.vorthLines.begin(),
+                                 [](const MiniMapLineEntry& a, const MiniMapLineEntry& b)
+                                 { return a.transform == b.transform && a.color == b.color; });
+    if (!same)
+    {
+        model.vorthLines = std::move(lines);
+        m_RmlView.MarkDirty("vorth_lines");
+    }
+}
+
+bool mu::ui::window::CMiniMap::SyncSpotHint()
+{
+    const UI::MiniMap::Screen screen = CurrentScreen();
+    const float length = UI::MiniMap::MapLength;
+    const float heroY = (static_cast<float>(Hero->PositionX) / 256.f) * length;
+    const float heroX = (static_cast<float>(Hero->PositionY) / 256.f) * length;
+    const int world = static_cast<int>(gMapManager.WorldActive);
+
+    // Only the spot under the pointer gets its name: all the names at once overlap and none reads.
+    const VorthSpot* under = nullptr;
+    UI::MiniMap::Point underPoint;
+    const float radius = 14.f * screen.scaleX;
+    float best = radius * radius;
+    for (const VorthSpot& spot : g_VorthSpots)
+    {
+        if (spot.map != world)
+            continue;
+        const UI::MiniMap::Point p =
+            VorthMapToWindow(screen, heroX, heroY, static_cast<float>(spot.x), static_cast<float>(spot.y));
+        const float dx = p.x - g_fWindowMouseX;
+        const float dy = p.y - g_fWindowMouseY;
+        const float d2 = dx * dx + dy * dy;
+        if (d2 < best)
+        {
+            best = d2;
+            under = &spot;
+            underPoint = p;
+        }
+    }
+    if (under == nullptr)
+        return false;
+
+    wchar_t text[128] = {0};
+    swprintf(text, 128, L"%ls x%d", under->name.c_str(), under->count);
+
+    const UI::Scaling::Transform transform = OverlayTransform();
+    const UI::Scaling::ScopedScreenStretch stretch(static_cast<int>(WindowWidth), static_cast<int>(WindowHeight));
+    g_pRenderText->SetFont(g_hFont);
+    const SIZE size = g_pRenderText->MeasureText(text, static_cast<int>(wcslen(text)));
+    const float refX = UI::Scaling::LogicalX(transform, underPoint.x);
+    const float refY = UI::Scaling::LogicalY(transform, underPoint.y);
+    const float x = refX - static_cast<float>(size.cx / 2) - 3.f;
+    const float y = refY - static_cast<float>(size.cy + 6);
+
+    Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintVisible, "hint_visible", true);
+    Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintText, "hint_text", StringUtils::WideToNarrow(text));
+    Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintLeft, "hint_left", UI::Scaling::PositionX(transform, x));
+    Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintTop, "hint_top", UI::Scaling::PositionY(transform, y));
+    Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintWidth, "hint_width",
+         UI::Scaling::SizeX(transform, static_cast<float>(size.cx + 6)));
+    Sync(m_RmlView.Binder(), &MiniMapRmlModel::hintHeight, "hint_height",
+         UI::Scaling::SizeY(transform, static_cast<float>(size.cy)));
+    return true;
+}
+
+// A click on the map: the hero walks there and the map closes.
+void mu::ui::window::CMiniMap::WalkToWindowPoint(float windowX, float windowY)
+{
+    if (!m_bSuccess)
+        return;
+
+    const UI::MiniMap::Screen screen = CurrentScreen();
+    const float length = UI::MiniMap::MapLength;
+    const float heroY = (static_cast<float>(Hero->PositionX) / 256.f) * length;
+    const float heroX = (static_cast<float>(Hero->PositionY) / 256.f) * length;
+
+    int destX = 0, destY = 0;
+    if (!VorthWindowToMap(screen, heroX, heroY, windowX, windowY, destX, destY))
+        return;
+    // A tile that can't be stepped on: nothing, rather than the hero walking anywhere.
+    if (!VorthWalkable(destX, destY))
+        return;
+    if (!PathFinding2(Hero->PositionX, Hero->PositionY, destX, destY, &Hero->Path))
+        return;
+
+    Hero->MovementType = MOVEMENT_MOVE;
+    SendMove(Hero, &Hero->Object);
+    VorthRememberOurPath();
+
+    g_VorthAutoMove = true;
+    g_VorthAutoMoveX = destX;
+    g_VorthAutoMoveY = destY;
+    g_VorthAutoMoveTries = 0;
+
+    PlayBuffer(SOUND_CLICK01);
+    g_pNewUISystem->Hide(mu::ui::window::INTERFACE_MINI_MAP);
+}
+
+// The path finder gives at most MAX_PATH_FIND steps per request: when the hero stops at the end of
+// our stretch, the next one is asked for. Runs while the window is enabled, shown or not.
+void mu::ui::window::CMiniMap::UpdateAutoMove()
+{
+    if (!g_VorthAutoMove)
+        return;
+    // Hero always points into a static array: only "in a world" (m_bSuccess) tells it is real.
+    if (m_pNewUIMng == NULL || m_bSuccess == false || Hero->Object.Live == false)
+    {
+        g_VorthAutoMove = false;
+        return;
+    }
+
+    if (Hero->PositionX == g_VorthAutoMoveX && Hero->PositionY == g_VorthAutoMoveY)
+    {
+        g_VorthAutoMove = false;
+        return;
+    }
+
+    if (Hero->Movement)
+    {
+        g_VorthAutoMoveTries = 0;
+        return;
+    }
+
+    // Stopped somewhere other than the end of our stretch: something else moved it (the player
+    // clicked elsewhere or went to hit something). Cancel.
+    if (g_VorthOurPathEnd[0] >= 0 &&
+        (static_cast<int>(Hero->PositionX) != g_VorthOurPathEnd[0] ||
+         static_cast<int>(Hero->PositionY) != g_VorthOurPathEnd[1]))
+    {
+        g_VorthAutoMove = false;
+        return;
+    }
+
+    // Standing still many times in a row: it can't get there.
+    if (++g_VorthAutoMoveTries > 60)
+    {
+        g_VorthAutoMove = false;
+        return;
+    }
+
+    if (PathFinding2(Hero->PositionX, Hero->PositionY, g_VorthAutoMoveX, g_VorthAutoMoveY, &Hero->Path))
+    {
+        Hero->MovementType = MOVEMENT_MOVE;
+        SendMove(Hero, &Hero->Object);
+        VorthRememberOurPath();
+    }
+    else
+    {
+        g_VorthAutoMove = false;
+    }
 }

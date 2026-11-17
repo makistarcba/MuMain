@@ -31,6 +31,9 @@
 			<div class="marker" data-for="marker : markers" data-class-portal="marker.portal"
 			     data-style-width="marker.size + 'px'" data-style-height="marker.size + 'px'"
 			     data-style-transform="marker.transform"></div>
+			<!-- VORTHANIA: the spots, the hover preview and the walk route (1x1 strokes, CMiniMap::SyncVorthania()). -->
+			<div class="vorth-line" data-for="vl : vorth_lines" data-style-transform="vl.transform"
+			     data-style-background-color="vl.color"></div>
 			<div class="screen">
 				<div class="hero"></div>
 				<!-- The top and bottom edge tiling: 25 fixed 35-unit tiles each, which the theme
@@ -44,7 +47,7 @@
 				<div class="corner corner-tr"></div>
 				<div class="corner corner-bl"></div>
 				<div class="corner corner-br"></div>
-				<div class="hit"></div>
+				<div class="hit" data-event-click="minimap_walk"></div>
 				<div class="close" data-event-click="minimap_close" data-attr-data-hint="close_hint"></div>
 			</div>
 			<div class="hint" data-if="hint_visible" data-style-left="hint_left + 'px'" data-style-top="hint_top + 'px'"

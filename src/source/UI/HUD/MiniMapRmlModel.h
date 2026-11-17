@@ -23,6 +23,14 @@ struct MiniMapMarkerEntry
     Rml::String transform; // CSS matrix() placing the icon element
 };
 
+// VORTHANIA: a straight stroke drawn over the map (the walk route, the hover preview, the
+// destination cross and the spot diamonds): a 1x1 element stretched by its matrix.
+struct MiniMapLineEntry
+{
+    Rml::String transform;
+    Rml::String color;
+};
+
 struct MiniMapRmlModel
 {
     float textPx = 0.f; // native text size in physical px (RmlNativeTextSize.h)
@@ -33,6 +41,7 @@ struct MiniMapRmlModel
     Rml::String mapTransform; // CSS matrix() placing the 800x800 map element
     std::vector<MiniMapMarkerEntry> markers;
     std::vector<Rml::String> sideLines; // CSS matrix() of each left/right border tile
+    std::vector<MiniMapLineEntry> vorthLines; // VORTHANIA: route, preview and spots
     Rml::String closeHint;
 
     // The hovered marker's name (CMiniMap::Check_Btn()), physical px.

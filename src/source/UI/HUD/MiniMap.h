@@ -54,6 +54,11 @@ private:
     void SyncMap();
     void SyncHint();
     void SyncClips();
+    // VORTHANIA: click to walk, the route, the spots.
+    void SyncVorthania(const UI::MiniMap::Screen& screen, float heroX, float heroY);
+    bool SyncSpotHint();
+    void WalkToWindowPoint(float windowX, float windowY);
+    void UpdateAutoMove();
 
     CManager* m_pNewUIMng;
     MINI_MAP m_Mini_Map_Data[MAX_MINI_MAP_DATA];
@@ -67,6 +72,10 @@ private:
         [this](Rml::DataModelConstructor& c, MiniMapRmlModel& model) { BindRmlModel(c, model); },
         {{"Data/Interface/RmlUi/mini_map.rml"}}};
     bool m_PendingClose = false;
+    // VORTHANIA: a click on the map waiting for Update() (window px).
+    bool m_PendingWalk = false;
+    float m_PendingWalkX = 0.f;
+    float m_PendingWalkY = 0.f;
     // The screen the border tiles' matrices were built for (SyncScreen()).
     UI::MiniMap::Screen m_SideLinesScreen;
 };

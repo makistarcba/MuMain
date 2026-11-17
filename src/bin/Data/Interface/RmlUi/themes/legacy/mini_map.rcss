@@ -151,3 +151,17 @@ body { pointer-events: none; }
 .edges .edge-top:nth-child(23), .edges .edge-bottom:nth-child(23) { left: 770px; }
 .edges .edge-top:nth-child(24), .edges .edge-bottom:nth-child(24) { left: 805px; }
 .edges .edge-top:nth-child(25), .edges .edge-bottom:nth-child(25) { left: 840px; }
+
+/* VORTHANIA: a translucent map, to see the game under it (the old client: 0.35 dim, map at 0.65),
+   and the strokes of the spots, the preview and the walk route. */
+.dim { background-color: #00000059; }
+.map { opacity: 0.65; }
+.vorth-line {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 1px;
+	height: 1px;
+	transform-origin: left top;
+	pointer-events: none;
+}
