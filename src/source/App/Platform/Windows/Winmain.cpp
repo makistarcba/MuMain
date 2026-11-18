@@ -1989,13 +1989,38 @@ static void SelectConnectServer(wchar_t* commandLine)
                         fromCommandLine ? L"the command line" : L"config.ini");
 }
 
+// VORTHANIA 18/11: el MuError.log va en la carpeta del juego, al lado del Main.exe, como en el cliente
+// viejo: es lo que se le pide a un jugador cuando algo falla, y %APPDATA%\MuMain\<Name> nadie lo encuentra.
+// Si la carpeta del juego no deja escribir (instalado en Archivos de programa), queda en la de usuario.
+static std::filesystem::path VorthaniaLogFolder()
+{
+    std::error_code error;
+    const std::filesystem::path gameFolder = std::filesystem::current_path(error);
+    if (!error)
+    {
+        const std::filesystem::path probe = gameFolder / "MuError.log";
+        std::FILE* file = nullptr;
+#ifdef _WIN32
+        file = _wfopen(probe.c_str(), L"ab");
+#else
+        file = std::fopen(probe.c_str(), "ab");
+#endif
+        if (file != nullptr)
+        {
+            std::fclose(file);
+            return gameFolder;
+        }
+    }
+    return Core::Platform::UserFolder();
+}
+
 // The content opens first: the user folder's name comes from the shipped defaults, and the log goes into that folder.
 // Returns OpenContent's line for the error report.
 static std::string InitializeWorkingDirectoryAndLog()
 {
     SetWorkingDirectoryToBasePath();
     std::string contentRoot = OpenContent();
-    mu::log::Init(Core::Platform::UserFolder(), mu::log::TargetLogSinks());
+    mu::log::Init(VorthaniaLogFolder(), mu::log::TargetLogSinks());
     return contentRoot;
 }
 
