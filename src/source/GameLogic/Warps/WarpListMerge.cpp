@@ -31,9 +31,23 @@ MoveReqInfo FromServer(const ServerWarp& warp)
 }
 } // namespace
 
+// VORTHANIA: the maps closed by the Season 2 cut keep their warp on the server with the level
+// requirement raised by 10000 (an impossible level), so they can be reopened by lowering it. They are
+// not offered in the warp list (key M) at all.
+constexpr int32_t VorthaniaClosedWarpLevel = 5000;
+
 std::vector<MoveReqInfo> MergeWarpList(const std::vector<MoveReqInfo>& dataFileWarps,
-                                       const std::vector<ServerWarp>& serverWarps)
+                                       const std::vector<ServerWarp>& allServerWarps)
 {
+    std::vector<ServerWarp> serverWarps;
+    for (const auto& warp : allServerWarps)
+    {
+        if (warp.levelRequirement < VorthaniaClosedWarpLevel)
+        {
+            serverWarps.push_back(warp);
+        }
+    }
+
     std::vector<MoveReqInfo> result;
     result.reserve(serverWarps.size());
 
