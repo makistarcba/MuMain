@@ -20,6 +20,12 @@
 #include "World/GameMaps/GMHellas.h"
 #include "World/GameMaps/GM_Kanturu_3rd.h"
 #include "Render/Text/CUIRenderText.h"
+#include "Core/Content/ContentStore.h"
+
+#include <cstdio>
+#include <sstream>
+#include <string>
+#include <unordered_map>
 
 // DevEditor forward declarations (must be at global scope)
 #ifdef _EDITOR
@@ -28,6 +34,36 @@ extern "C" bool DevEditor_ShouldRenderItemLabels();
 
 using namespace SEASON3B;
 using namespace mu::ui::window;
+
+namespace
+{
+// VORTHANIA: the level of each monster, as the server has it (config."MonsterAttribute", Level),
+// from Data\Local\VorthaniaMonsterLevels.txt ("number level" per line, # = comment). The client
+// data has no levels, and the server's are the ones that count. Without the file: names only.
+const std::unordered_map<int, int>& VorthaniaMonsterLevels()
+{
+    static const std::unordered_map<int, int> levels = []
+    {
+        std::unordered_map<int, int> result;
+        const std::optional<std::string> text =
+            Content::ReadFile(std::filesystem::path(L"Data\\Local\\VorthaniaMonsterLevels.txt"));
+        if (!text)
+            return result;
+        std::istringstream lines(*text);
+        std::string line;
+        while (std::getline(lines, line))
+        {
+            if (line.empty() || line[0] == '#')
+                continue;
+            int number = 0, level = 0;
+            if (std::sscanf(line.c_str(), "%d %d", &number, &level) == 2 && level > 0)
+                result[number] = level;
+        }
+        return result;
+    }();
+    return levels;
+}
+} // namespace
 
 namespace
 {
@@ -276,7 +312,12 @@ void mu::ui::window::CNameWindow::RenderName()
         {
             g_pRenderText->SetTextColor(255, 230, 200, 255);
             g_pRenderText->SetBgColor(100, 0, 0, 255);
-            g_pRenderText->RenderText(320, 2, c->ID, 0, 0, RT3_WRITE_CENTER);
+            // VORTHANIA: "Name  Nv. 42" when the level of that monster is known.
+            std::wstring label = c->ID;
+            const auto& levels = VorthaniaMonsterLevels();
+            if (const auto level = levels.find(static_cast<int>(c->MonsterIndex)); level != levels.end())
+                label += L"  Nv. " + std::to_wstring(level->second);
+            g_pRenderText->RenderText(320, 2, label.c_str(), 0, 0, RT3_WRITE_CENTER);
 
             if (UI::Combat::HealthBar::ShouldRenderSelected(c->HealthStatus))
             {
