@@ -7165,10 +7165,16 @@ void ReceiveSummonLife(const BYTE* ReceiveBuffer)
 BOOL ReceiveTrade(const BYTE* ReceiveBuffer, BOOL bEncrypted)
 {
     auto Data = (LPPCHATING)ReceiveBuffer;
+    // VORTHANIA 19/11: the trade request packet (C3 36) is only the header and the 10 name bytes, with no
+    // terminator when the name has exactly 10 letters (e.g. "Sorpresita"). Unbounded, the conversion read
+    // past the end of the packet and the client that received the request froze or closed.
+    char requesterUtf8[MAX_USERNAME_SIZE + 1]{};
+    memcpy(requesterUtf8, Data->ID, MAX_USERNAME_SIZE);
     wchar_t requester[MAX_USERNAME_SIZE + 1]{};
-    CMultiLanguage::ConvertFromUtf8(requester, Data->ID);
+    CMultiLanguage::ConvertFromUtf8(requester, requesterUtf8, MAX_USERNAME_SIZE);
+    requester[MAX_USERNAME_SIZE] = L'\0';
     const bool asked = UI::Trade::RequestReceived(requester);
-    App::Control::Events::RecordTradeRequested(Data->ID, asked);
+    App::Control::Events::RecordTradeRequested(requesterUtf8, asked);
 
     return (TRUE);
 }

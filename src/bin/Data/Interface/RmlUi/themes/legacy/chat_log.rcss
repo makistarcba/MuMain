@@ -132,6 +132,7 @@
 .chat-line--union   { background-color: rgba(200, 200, 0, 200);  color: rgb(0, 0, 0); }
 .chat-line--gens    { background-color: rgba(150, 200, 100, 200); color: rgb(0, 0, 0); }
 .chat-line--gm      { background-color: rgba(30, 30, 30, 200);   color: rgb(250, 200, 50); font-weight: bold; }
+.chat-line--post    { background-color: rgba(30, 140, 230, 210); color: rgb(255, 255, 255); font-weight: bold; } /* VORTHANIA: /post */
 
 /* Native drops chat-line background alpha from 150 to 100 while the frame is shown, so the frame's
    own fill reads through it -- the one per-type colour that depends on frame state. */

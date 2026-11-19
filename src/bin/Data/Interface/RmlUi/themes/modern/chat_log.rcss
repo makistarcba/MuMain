@@ -117,6 +117,7 @@
 .chat-line--union   { border-left-color: rgb(200, 200, 0);   color: rgb(230, 230, 130); }
 .chat-line--gens    { border-left-color: rgb(150, 200, 100); color: rgb(200, 230, 170); }
 .chat-line--gm      { border-left-color: token(accent-gold); color: token(accent-gold); font-weight: bold; }
+.chat-line--post    { border-left-color: rgb(60, 170, 255); background-color: rgba(30, 140, 230, 120); color: rgb(255, 255, 255); font-weight: bold; } /* VORTHANIA: /post */
 
 /* Legacy drops chat-line alpha while the frame is shown so the frame fill reads through; the same
    need exists here, stated against this theme's own ground. */

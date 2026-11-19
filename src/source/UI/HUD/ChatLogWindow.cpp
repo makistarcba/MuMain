@@ -778,6 +778,12 @@ void mu::ui::window::CChatLogWindow::RebuildLineModel()
 
         ChatLogLineEntry entry;
         entry.kind = slug;
+        // VORTHANIA 19/11: OpenMU sends a /post as a normal chat line from the sender "[POST]"; it gets
+        // its own colour (.chat-line--post) so it doesn't look like the chat of the players around.
+        if (pMsgText->GetType() == TYPE_CHAT_MESSAGE && pMsgText->GetID() == L"[POST]")
+        {
+            entry.kind = "post";
+        }
         entry.hasId = !pMsgText->GetID().empty();
         const type_string composed = entry.hasId
             ? pMsgText->GetID() + L" : " + pMsgText->GetText()
